@@ -1,0 +1,470 @@
+{
+  "Uuid": "d6999f79-aa6f-4b64-83c2-4806b2fbc108",
+  "IsCustomNode": false,
+  "Description": "ADLB - generar familia de Revit desde Excel",
+  "Name": "ADLB_Generar_Familia",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "HintPath": "C:\\RUTA\\ADLB_Plantilla_Familia.xlsx",
+      "InputValue": "C:\\RUTA\\ADLB_Plantilla_Familia.xlsx",
+      "NodeType": "ExtensionNode",
+      "Id": "3ff92db75e674a32866321187000f419",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "a1ee47057add4c2fb709252892830150",
+          "Name": "",
+          "Description": "Ruta",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "1 - Excel de la familia"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.Directory, CoreNodeModels",
+      "HintPath": "C:\\RUTA\\Familias",
+      "InputValue": "C:\\RUTA\\Familias",
+      "NodeType": "ExtensionNode",
+      "Id": "d93984a62bef4946b20a43d512584171",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "d9d3091c99c74cb0a06792e4113ca985",
+          "Name": "",
+          "Description": "Ruta",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "2 - Carpeta de salida"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "HintPath": "",
+      "InputValue": "",
+      "NodeType": "ExtensionNode",
+      "Id": "5f0925a2e3014c05805f0456d5403190",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "e6a1eb44321344f289142b9fedfe8a1f",
+          "Name": "",
+          "Description": "Ruta",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "3 - Plano de PLANTA .dwg/.dxf (opcional)"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "HintPath": "",
+      "InputValue": "",
+      "NodeType": "ExtensionNode",
+      "Id": "b84d6a78bff4446d912c67af4411bcb4",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "c271d9ada62449c7830c6264b668e0c0",
+          "Name": "",
+          "Description": "Ruta",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "4 - Plano de ALZADO frontal .dwg/.dxf (opcional)"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "NodeType": "BooleanInputNode",
+      "InputValue": true,
+      "Id": "8199c92a94da4edb9687e2e8752c5506",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "3049ff3cbca441cdbfa8f631bab3ecb2",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "5 - Cargar en el proyecto"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "NodeType": "BooleanInputNode",
+      "InputValue": true,
+      "Id": "f630185bc7df401491332448a9c3f604",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "0fc394e7e54b4315bad63b9c359ee3ef",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "6 - SOLO VALIDAR"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "NodeType": "BooleanInputNode",
+      "InputValue": false,
+      "Id": "97a26ae3bf874ed69142c96e1fcb4943",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "2986f5067d4b4eeb822a42de49d5f3cc",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "7 - EJECUTAR"
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "Code": "# -*- coding: utf-8 -*-\n\"\"\"\nADLB · Generar familia de Revit desde Excel\nRevit 2022+ · Dynamo 2.x · un solo nodo Python (CPython3 o IronPython 2.7) · sin paquetes externos\n\nEntradas del nodo\n  IN[0]  Excel ADLB_Plantilla_Familia.xlsx (llenado)\n  IN[1]  carpeta donde se guarda el .rfa\n  IN[2]  plano de PLANTA (.dwg / .dxf, opcional)  -> se importa en la vista de planta de la familia\n  IN[3]  plano de ALZADO FRONTAL (.dwg / .dxf, opcional) -> se importa en el alzado frontal\n  IN[4]  cargar la familia en el proyecto abierto (True / False)\n  IN[5]  SOLO VALIDAR (True = revisa el Excel y no crea nada)\n  IN[6]  EJECUTAR (False mientras llenas las entradas)\n\nConvenciones (las mismas del Excel)\n  - Unidades: mm.  Origen (0,0,0) = el origen de tus dibujos, sobre el piso.\n  - X = a lo largo en la planta, Y = a lo ancho en la planta, Z = altura (alzado).\n  - Cada pieza se describe por su caja envolvente: X desde/hasta, Y desde/hasta, Z desde/hasta.\n\"\"\"\nimport io\nimport os\nimport re\nimport math\nimport time\nimport zipfile\nimport datetime\nimport xml.etree.ElementTree as ET\n\nimport clr\nclr.AddReference('RevitAPI')\nclr.AddReference('RevitServices')\nfrom Autodesk.Revit.DB import (\n    Arc, BuiltInCategory, BuiltInParameter, Category, Color, ConnectorElement, ConnectorProfileType,\n    CurveArray, CurveArrArray, DWGImportOptions, FamilyElementVisibility, FamilyElementVisibilityType,\n    FamilySource, FilteredElementCollector, FlowDirectionType, GroupTypeId, IFamilyLoadOptions,\n    ImportColorMode, ImportPlacement, ImportUnit, Line, Material, Options, PlanarFace, Plane,\n    SaveAsOptions, SketchPlane, Solid, SpecTypeId, Transaction, UnitTypeId, UnitUtils, View,\n    ViewDetailLevel, ViewPlan, ViewType, XYZ,\n)\nfrom Autodesk.Revit.DB.Plumbing import PipeSystemType\nfrom Autodesk.Revit.DB.Mechanical import DuctSystemType\nfrom Autodesk.Revit.DB.Electrical import ElectricalSystemType\nfrom RevitServices.Persistence import DocumentManager\nfrom RevitServices.Transactions import TransactionManager\n\nMM = 1.0 / 304.8\nSEC = {'X': ('Y', 'Z'), 'Y': ('X', 'Z'), 'Z': ('X', 'Y')}\nUNIT = {'X': (1, 0, 0), 'Y': (0, 1, 0), 'Z': (0, 0, 1)}\nSI = ('si', 's', 'yes', 'y', 'true', '1', 'x', 'verdadero')\n\nCATEGORIAS = {\n    'equipomecanico': ('OST_MechanicalEquipment', [u'Equipo mecánico métrico.rft', 'Metric Mechanical Equipment.rft', 'M_Mechanical Equipment.rft']),\n    'equipoelectrico': ('OST_ElectricalEquipment', [u'Equipo eléctrico métrico.rft', 'Metric Electrical Equipment.rft', 'M_Electrical Equipment.rft']),\n    'aparatosanitario': ('OST_PlumbingFixtures', [u'Aparato sanitario métrico.rft', 'Metric Plumbing Fixture.rft', 'M_Plumbing Fixture.rft']),\n    'accesoriodetuberia': ('OST_PipeAccessory', [u'Accesorio de tubería métrico.rft', 'Metric Pipe Accessory.rft', 'M_Pipe Accessory.rft']),\n    'modelogenerico': ('OST_GenericModel', [u'Modelo genérico métrico.rft', 'Metric Generic Model.rft', 'M_Generic Model.rft']),\n}\nGENERICAS = [u'Modelo genérico métrico.rft', 'Metric Generic Model.rft', 'M_Generic Model.rft']\nTIPOS_DATO = {\n    'longitud': ('Length', 'mm'), 'texto': ('String.Text', 'txt'), 'url': ('String.Url', 'txt'),\n    'numero': ('Number', 'num'), 'entero': ('Int.Integer', 'int'), 'sino': ('Boolean.YesNo', 'bool'),\n    'angulo': ('Angle', 'deg'), 'area': ('Area', 'm2'), 'volumen': ('Volume', 'm3'),\n    'material': ('Reference.Material', 'mat'),\n}\nGRUPOS = {\n    'dimensiones': 'Geometry', 'restricciones': 'Constraints', 'datos': 'Data', 'identidad': 'IdentityData',\n    'materiales': 'Materials', 'texto': 'Text', 'graficos': 'Graphics', 'mecanico': 'Mechanical',\n    'electrico': 'Electrical', 'fontaneria': 'Plumbing', 'estructural': 'Structural', 'general': 'General',\n}\nSIS_TUBERIA = {\n    'aguafria': 'DomesticColdWater', 'aguacaliente': 'DomesticHotWater', 'sanitario': 'Sanitary',\n    'ventilacion': 'Vent', 'pluvial': 'Storm', 'incendio': 'FireProtectWet',\n    'suministrohidronico': 'SupplyHydronic', 'retornohidronico': 'ReturnHydronic', 'otro': 'OtherPipe',\n}\nSIS_DUCTO = {'suministroaire': 'SupplyAir', 'retornoaire': 'ReturnAir', 'extraccion': 'ExhaustAir',\n             'otro': 'OtherAir'}\n\n\n# ============================================================================ utilidades\ndef norm(t):\n    t = (u'%s' % ('' if t is None else t)).strip().lower()\n    for a, b in ((u'á', u'a'), (u'é', u'e'), (u'í', u'i'), (u'ó', u'o'), (u'ú', u'u'), (u'ñ', u'n'),\n                 (u' ', u''), (u'_', u''), (u'-', u''), (u'.', u'')):\n        t = t.replace(a, b)\n    return t\n\n\ndef num(v, defecto=None):\n    if v is None or (u'%s' % v).strip() == u'':\n        return defecto\n    return float((u'%s' % v).strip().replace(u',', u'.'))\n\n\ndef nombre_param(*partes):\n    \"\"\"Une partes en un nombre de parametro valido: sin espacios, tildes ni simbolos.\"\"\"\n    out = []\n    for p in partes:\n        p = (u'%s' % p).strip()\n        if not p:\n            continue\n        for a, b in ((u'á', u'a'), (u'é', u'e'), (u'í', u'i'), (u'ó', u'o'), (u'ú', u'u'), (u'ñ', u'n'),\n                     (u'Á', u'A'), (u'É', u'E'), (u'Í', u'I'), (u'Ó', u'O'), (u'Ú', u'U'), (u'Ñ', u'N')):\n            p = p.replace(a, b)\n        p = re.sub(u'[^A-Za-z0-9]+', u'_', p).strip(u'_')\n        out.append(p)\n    return u'_'.join(out)\n\n\ndef xyz(x, y, z):\n    return XYZ(x * MM, y * MM, z * MM)\n\n\ndef vec(eje):\n    s = -1.0 if eje.startswith('-') else 1.0\n    u = UNIT[eje[-1]]\n    return XYZ(s * u[0], s * u[1], s * u[2])\n\n\ndef pt(d):\n    return xyz(d['X'], d['Y'], d['Z'])\n\n\ndef spec_id(path):\n    obj = SpecTypeId\n    for part in path.split('.'):\n        obj = getattr(obj, part)\n    return obj\n\n\ndef grupo_id(nombre, defecto='Data'):\n    return getattr(GroupTypeId, GRUPOS.get(norm(nombre), defecto), GroupTypeId.Data)\n\n\ndef txt_error(ex):\n    return (u'%s' % ex).replace(u'\\r', u' ').replace(u'\\n', u' | ')\n\n\n# ============================================================================ lector de Excel (.xlsx sin dependencias)\n_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'\n_NSR = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'\n\n\ndef leer_excel(ruta):\n    \"\"\"Devuelve {nombre_hoja: [ {encabezado_normalizado: valor} ]} usando la fila 1 como encabezados.\"\"\"\n    z = zipfile.ZipFile(ruta)\n    comunes = []\n    if 'xl/sharedStrings.xml' in z.namelist():\n        for si in ET.fromstring(z.read('xl/sharedStrings.xml')).findall('{%s}si' % _NS):\n            comunes.append(u''.join(t.text or u'' for t in si.iter('{%s}t' % _NS)))\n    rels = ET.fromstring(z.read('xl/_rels/workbook.xml.rels'))\n    destino = dict((r.get('Id'), r.get('Target')) for r in rels)\n    libro = ET.fromstring(z.read('xl/workbook.xml'))\n    hojas = {}\n    for s in libro.find('{%s}sheets' % _NS):\n        t = destino[s.get('{%s}id' % _NSR)].lstrip('/')\n        t = t if t.startswith('xl/') else 'xl/' + t\n        hojas[norm(s.get('name'))] = _tabla(ET.fromstring(z.read(t)), comunes)\n    return hojas\n\n\ndef _tabla(raiz, comunes):\n    celdas = {}\n    for c in raiz.iter('{%s}c' % _NS):\n        ref = c.get('r')\n        col = re.match('[A-Z]+', ref).group(0)\n        fila = int(ref[len(col):])\n        tipo = c.get('t')\n        v = c.find('{%s}v' % _NS)\n        if tipo == 's':\n            val = comunes[int(v.text)]\n        elif tipo == 'inlineStr':\n            val = u''.join(x.text or u'' for x in c.iter('{%s}t' % _NS))\n        elif tipo == 'b':\n            val = u'Si' if (v is not None and v.text == '1') else u'No'\n        else:\n            val = v.text if v is not None else u''\n        celdas.setdefault(fila, {})[col] = val\n    if 1 not in celdas:\n        return []\n    enc = dict((col, norm(v)) for col, v in celdas[1].items() if v)\n    out = []\n    for fila in sorted(celdas):\n        if fila == 1:\n            continue\n        d = dict((enc[c], v) for c, v in celdas[fila].items() if c in enc)\n        primero = (u'%s' % d.get(enc[sorted(enc, key=lambda k: (len(k), k))[0]], u'')).strip()\n        if not primero or primero.startswith(u'#'):\n            continue\n        d['_fila'] = fila\n        out.append(d)\n    return out\n\n\n# ============================================================================ validacion\ndef validar(t, log):\n    errores = 0\n    fam = t['familia']\n    if not fam.get('nombrearchivo'):\n        log.append(u'ERROR  1_Familia: falta Nombre_Archivo'); errores += 1\n    if norm(fam.get('categoria')) not in CATEGORIAS:\n        log.append(u'AVISO  1_Familia: categoria \"%s\" no reconocida, se usa Modelo generico' % fam.get('categoria'))\n    for p in t['piezas']:\n        ref = u'2_Piezas fila %d (%s)' % (p['_fila'], p.get('pieza'))\n        try:\n            c = [num(p.get(k)) for k in ('xdesde', 'xhasta', 'ydesde', 'yhasta', 'zdesde', 'zhasta')]\n            if None in c:\n                raise Exception(u'faltan coordenadas')\n            if c[1] <= c[0] or c[3] <= c[2] or c[5] <= c[4]:\n                raise Exception(u'cada \"hasta\" debe ser mayor que su \"desde\"')\n            if norm(p.get('forma')) not in ('caja', 'cilindro'):\n                raise Exception(u'Forma debe ser Caja o Cilindro')\n            if norm(p.get('forma')) == 'cilindro':\n                eje = (p.get('eje') or u'Z').strip().upper()\n                if eje not in ('X', 'Y', 'Z'):\n                    raise Exception(u'Eje debe ser X, Y o Z')\n                d = {'X': (c[3] - c[2], c[5] - c[4]), 'Y': (c[1] - c[0], c[5] - c[4]), 'Z': (c[1] - c[0], c[3] - c[2])}[eje]\n                if abs(d[0] - d[1]) > 1.0:\n                    log.append(u'AVISO  %s: la seccion no es cuadrada (%.0f x %.0f), se usa el diametro menor' % (ref, d[0], d[1]))\n        except Exception as ex:\n            log.append(u'ERROR  %s: %s' % (ref, txt_error(ex))); errores += 1\n    for cx in t['conexiones']:\n        ref = u'3_Conexiones fila %d (%s)' % (cx['_fila'], cx.get('conexion'))\n        try:\n            if None in [num(cx.get(k)) for k in ('x', 'y', 'z')]:\n                raise Exception(u'faltan X, Y o Z')\n            d = (cx.get('direccion') or u'').strip().upper()\n            if d not in ('+X', '-X', '+Y', '-Y', '+Z', '-Z'):\n                raise Exception(u'Direccion debe ser +X, -X, +Y, -Y, +Z o -Z')\n            tipo = norm(cx.get('tipo'))\n            if tipo not in ('tuberia', 'ducto', 'electrico'):\n                raise Exception(u'Tipo debe ser Tuberia, Ducto o Electrico')\n            if tipo == 'tuberia' and not num(cx.get('diametro')):\n                raise Exception(u'una tuberia necesita Diametro')\n            if tipo == 'ducto' and norm(cx.get('forma')) == 'redonda' and not num(cx.get('diametro')):\n                raise Exception(u'un ducto redondo necesita Diametro')\n            if tipo == 'ducto' and norm(cx.get('forma')) != 'redonda' and not (num(cx.get('ancho')) and num(cx.get('alto'))):\n                raise Exception(u'un ducto rectangular necesita Ancho y Alto')\n        except Exception as ex:\n            log.append(u'ERROR  %s: %s' % (ref, txt_error(ex))); errores += 1\n    for p in t['parametros']:\n        if norm(p.get('tipodato')) not in TIPOS_DATO:\n            log.append(u'ERROR  4_Parametros fila %d (%s): TipoDato \"%s\" no reconocido' % (\n                p['_fila'], p.get('nombre'), p.get('tipodato'))); errores += 1\n    return errores\n\n\n# ============================================================================ generador\nclass Generador(object):\n\n    def __init__(self, app, tablas, log):\n        self.app = app\n        self.t = tablas\n        self.f = tablas['familia']\n        self.log = log\n        self.prefijo = nombre_param(self.f.get('prefijo', u''))\n        self.doc = None\n        self.fm = None\n        self.mats, self.subs, self.params = {}, {}, {}\n\n    # ---------------------------------------------------------------- documento\n    def plantilla(self):\n        propia = (self.f.get('plantillarft') or u'').strip()\n        if propia and os.path.exists(propia):\n            return propia\n        cat = CATEGORIAS.get(norm(self.f.get('categoria')), CATEGORIAS['modelogenerico'])\n        raices = [self.app.FamilyTemplatePath,\n                  u'C:\\\\ProgramData\\\\Autodesk\\\\RVT %s\\\\Family Templates' % self.app.VersionNumber]\n        for nombres in (cat[1], GENERICAS):\n            for raiz in raices:\n                if not raiz or not os.path.isdir(raiz):\n                    continue\n                for dp, _d, fs in os.walk(raiz):\n                    for f in fs:\n                        if f.lower() in [n.lower() for n in nombres]:\n                            return os.path.join(dp, f)\n        raise Exception(u'No se encontro plantilla .rft. Escribe la ruta en 1_Familia > Plantilla_RFT')\n\n    def tx(self, nombre):\n        t = Transaction(self.doc, nombre)\n        t.Start()\n        return t\n\n    def paso(self, nombre, funcion):\n        t = self.tx(u'ADLB - ' + nombre)\n        try:\n            funcion()\n            t.Commit()\n        except Exception as ex:\n            t.RollBack()\n            raise Exception(u'%s: %s' % (nombre, txt_error(ex)))\n\n    # ---------------------------------------------------------------- 1. familia, tipo, materiales\n    def base(self):\n        cat = CATEGORIAS.get(norm(self.f.get('categoria')), CATEGORIAS['modelogenerico'])\n        c = Category.GetCategory(self.doc, getattr(BuiltInCategory, cat[0]))\n        fam = self.doc.OwnerFamily\n        if fam.FamilyCategory is None or fam.FamilyCategory.Id.IntegerValue != c.Id.IntegerValue:\n            fam.FamilyCategory = c\n        tipo = (self.f.get('nombretipo') or u'Tipo 1').strip()\n        existentes = [x for x in self.fm.Types if x.Name == tipo]\n        self.fm.CurrentType = existentes[0] if existentes else self.fm.NewType(tipo)\n        famcat = fam.FamilyCategory\n        actuales = dict((s.Name, s) for s in famcat.SubCategories)\n        for p in self.t['piezas']:\n            grupo = (p.get('grupo') or u'Cuerpo').strip()\n            if grupo not in self.subs:\n                sc = actuales.get(grupo) or self.doc.Settings.Categories.NewSubcategory(famcat, grupo)\n                self.subs[grupo] = sc\n            mat = (p.get('material') or u'').strip()\n            if mat and mat not in self.mats:\n                self.mats[mat] = self.material(mat, p.get('color'))\n        if 'Conexiones' not in self.subs:\n            self.subs['Conexiones'] = actuales.get('Conexiones') or self.doc.Settings.Categories.NewSubcategory(famcat, 'Conexiones')\n        self.log.append(u'OK     categoria %s, tipo \"%s\", %d grupos, %d materiales' % (\n            famcat.Name, tipo, len(self.subs), len(self.mats)))\n\n    def material(self, nombre, color):\n        for m in FilteredElementCollector(self.doc).OfClass(Material):\n            if m.Name == nombre:\n                return m.Id\n        mid = Material.Create(self.doc, nombre)\n        m = self.doc.GetElement(mid)\n        h = (u'%s' % (color or u'')).strip().lstrip(u'#')\n        if len(h) == 6:\n            m.Color = Color(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))\n        return mid\n\n    # ---------------------------------------------------------------- 2. parametros\n    def nuevo_param(self, nombre, spec, grupo, instancia=False, valor=None, formula=None):\n        fp = self.fm.get_Parameter(nombre)\n        if fp is None:\n            fp = self.fm.AddParameter(nombre, grupo, spec_id(spec), instancia)\n        self.params[nombre] = fp\n        if valor is not None:\n            self.fm.Set(fp, valor)\n        if formula:\n            self.fm.SetFormula(fp, formula)\n        return fp\n\n    def parametros(self):\n        for bip, clave in (('ALL_MODEL_MANUFACTURER', 'fabricante'), ('ALL_MODEL_MODEL', 'modelo'),\n                           ('ALL_MODEL_DESCRIPTION', 'descripcion'), ('ALL_MODEL_URL', 'url')):\n            v = (self.f.get(clave) or u'').strip()\n            if v:\n                try:\n                    self.fm.Set(self.fm.get_Parameter(getattr(BuiltInParameter, bip)), v)\n                except Exception as ex:\n                    self.log.append(u'AVISO  %s: %s' % (bip, txt_error(ex)))\n        for nombre, mid in self.mats.items():\n            self.nuevo_param(nombre_param(u'Mat', nombre), 'Reference.Material', GroupTypeId.Materials, False, mid)\n        compartidos = self.compartidos()\n        tipos = list(self.fm.Types)\n        n = 0\n        for p in self.t['parametros']:\n            nombre = nombre_param(p.get('nombre'))\n            try:\n                td = TIPOS_DATO[norm(p.get('tipodato'))]\n                inst = norm(p.get('instancia')) in SI\n                fp = self.fm.get_Parameter(nombre)\n                if fp is None:\n                    if norm(p.get('compartido')) in SI:\n                        d = compartidos.get(nombre)\n                        if d is None:\n                            raise Exception(u'no esta en el archivo de parametros compartidos')\n                        fp = self.fm.AddParameter(d, grupo_id(p.get('grupo')), inst)\n                    else:\n                        fp = self.fm.AddParameter(nombre, grupo_id(p.get('grupo')), spec_id(td[0]), inst)\n                self.params[nombre] = fp\n                if (p.get('formula') or u'').strip():\n                    self.fm.SetFormula(fp, p.get('formula').strip())\n                elif (u'%s' % (p.get('valor') or u'')).strip():\n                    v = self.convertir(p.get('valor'), td[1])\n                    for ty in tipos:\n                        self.fm.CurrentType = ty\n                        self.fm.Set(fp, v)\n                n += 1\n            except Exception as ex:\n                self.log.append(u'ERROR  4_Parametros fila %d (%s): %s' % (p['_fila'], nombre, txt_error(ex)))\n        self.log.append(u'OK     %d parametros de la hoja 4_Parametros' % n)\n\n    def compartidos(self):\n        ruta = (self.f.get('archivocompartidos') or u'').strip()\n        if not ruta:\n            return {}\n        if not os.path.exists(ruta):\n            self.log.append(u'AVISO  no existe el archivo de compartidos: %s' % ruta)\n            return {}\n        previo = self.app.SharedParametersFilename\n        try:\n            self.app.SharedParametersFilename = ruta\n            archivo = self.app.OpenSharedParameterFile()\n            return dict((d.Name, d) for g in archivo.Groups for d in g.Definitions)\n        finally:\n            if previo:\n                self.app.SharedParametersFilename = previo\n\n    def convertir(self, valor, modo):\n        v = (u'%s' % valor).strip()\n        if modo == 'txt':\n            return datetime.date.today().isoformat() if v.upper() == u'HOY' else v\n        if modo == 'bool':\n            return 1 if norm(v) in SI else 0\n        if modo == 'mat':\n            mid = self.mats.get(v)\n            if mid is None:\n                for m in FilteredElementCollector(self.doc).OfClass(Material):\n                    if norm(m.Name) == norm(v):\n                        mid = m.Id\n            if mid is None:\n                raise Exception(u'material \"%s\" no existe' % v)\n            return mid\n        n = num(v)\n        if modo == 'int':\n            return int(round(n))\n        if modo == 'num':\n            return n\n        u = {'mm': UnitTypeId.Millimeters, 'deg': UnitTypeId.Degrees, 'm2': UnitTypeId.SquareMeters,\n             'm3': UnitTypeId.CubicMeters}[modo]\n        return UnitUtils.ConvertToInternalUnits(n, u)\n\n    # ---------------------------------------------------------------- 3. planos\n    def planos(self, planta, alzado):\n        vistas_planta = [v for v in FilteredElementCollector(self.doc).OfClass(ViewPlan) if not v.IsTemplate]\n        frontales = [v for v in FilteredElementCollector(self.doc).OfClass(View)\n                     if not v.IsTemplate and v.ViewType == ViewType.Elevation and v.ViewDirection.Y < -0.9]\n        for ruta, vistas, nombre in ((planta, vistas_planta, u'planta'), (alzado, frontales, u'alzado frontal')):\n            if not ruta:\n                continue\n            if not os.path.exists(ruta):\n                self.log.append(u'AVISO  no existe el plano de %s: %s' % (nombre, ruta))\n                continue\n            if not vistas:\n                self.log.append(u'AVISO  la plantilla no tiene vista de %s' % nombre)\n                continue\n            op = DWGImportOptions()\n            op.Placement = ImportPlacement.Origin\n            op.Unit = ImportUnit.Millimeter\n            op.ThisViewOnly = True\n            op.ColorMode = ImportColorMode.Preserved\n            res = self.doc.Import(ruta, op, vistas[0])\n            eid = res[1] if isinstance(res, tuple) else None\n            if eid is not None:\n                try:\n                    self.doc.GetElement(eid).Pinned = True\n                except Exception:\n                    pass\n            self.log.append(u'OK     plano de %s importado en \"%s\" (origen a origen, mm)' % (nombre, vistas[0].Name))\n\n    # ---------------------------------------------------------------- 4. piezas\n    def lazo_rect(self, eje, coord, cu, cv, du, dv):\n        ku, kv = SEC[eje]\n        u, v = vec(ku), vec(kv)\n        c = pt({eje: coord, ku: cu, kv: cv})\n        p = [c.Add(u.Multiply(su * du / 2.0 * MM)).Add(v.Multiply(sv * dv / 2.0 * MM))\n             for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]\n        ca = CurveArray()\n        for i in range(4):\n            ca.Append(Line.CreateBound(p[i], p[(i + 1) % 4]))\n        return ca\n\n    def lazo_circ(self, eje, coord, cu, cv, r):\n        ku, kv = SEC[eje]\n        u, v = vec(ku), vec(kv)\n        c = pt({eje: coord, ku: cu, kv: cv})\n        a, b = c.Add(u.Multiply(r * MM)), c.Subtract(u.Multiply(r * MM))\n        ca = CurveArray()\n        ca.Append(Arc.Create(a, b, c.Add(v.Multiply(r * MM))))\n        ca.Append(Arc.Create(b, a, c.Subtract(v.Multiply(r * MM))))\n        return ca\n\n    def extruir(self, lazos, normal, origen, fin, inicio=0.0):\n        caa = CurveArrArray()\n        for l in lazos:\n            caa.Append(l)\n        sp = SketchPlane.Create(self.doc, Plane.CreateByNormalAndOrigin(normal, origen))\n        el = self.doc.FamilyCreate.NewExtrusion(True, caa, sp, fin * MM)\n        if inicio:\n            el.get_Parameter(BuiltInParameter.EXTRUSION_START_PARAM).Set(inicio * MM)\n        return el\n\n    def estilo(self, el, grupo, material, detalle=u''):\n        sc = self.subs.get(grupo)\n        if sc is not None:\n            el.Subcategory = sc\n        if material:\n            fp = self.params.get(nombre_param(u'Mat', material))\n            if fp is not None:\n                self.fm.AssociateElementParameterToFamilyParameter(\n                    el.get_Parameter(BuiltInParameter.MATERIAL_ID_PARAM), fp)\n        if norm(detalle).startswith('medio') or norm(detalle).startswith('solo'):\n            vis = FamilyElementVisibility(FamilyElementVisibilityType.Model)\n            vis.IsShownInCoarse = False\n            el.SetVisibility(vis)\n\n    def piezas(self):\n        n = 0\n        for p in self.t['piezas']:\n            try:\n                x0, x1, y0, y1, z0, z1 = [num(p.get(k)) for k in ('xdesde', 'xhasta', 'ydesde', 'yhasta', 'zdesde', 'zhasta')]\n                cx, cy, cz = (x0 + x1) / 2.0, (y0 + y1) / 2.0, (z0 + z1) / 2.0\n                if norm(p.get('forma')) == 'cilindro':\n                    eje = (p.get('eje') or u'Z').strip().upper()\n                    if eje == 'X':\n                        lz, a0, a1 = self.lazo_circ('X', x0, cy, cz, min(y1 - y0, z1 - z0) / 2.0), x0, x1\n                    elif eje == 'Y':\n                        lz, a0, a1 = self.lazo_circ('Y', y0, cx, cz, min(x1 - x0, z1 - z0) / 2.0), y0, y1\n                    else:\n                        lz, a0, a1 = self.lazo_circ('Z', z0, cx, cy, min(x1 - x0, y1 - y0) / 2.0), z0, z1\n                    origen = pt({eje: a0, SEC[eje][0]: 0.0, SEC[eje][1]: 0.0})\n                    el = self.extruir([lz], vec(eje), origen, a1 - a0)\n                else:\n                    el = self.extruir([self.lazo_rect('Z', z0, cx, cy, x1 - x0, y1 - y0)], XYZ.BasisZ,\n                                      xyz(0, 0, z0), z1 - z0)\n                self.estilo(el, (p.get('grupo') or u'Cuerpo').strip(), (p.get('material') or u'').strip(), p.get('detalle'))\n                n += 1\n            except Exception as ex:\n                self.log.append(u'ERROR  2_Piezas fila %d (%s): %s' % (p['_fila'], p.get('pieza'), txt_error(ex)))\n        self.log.append(u'OK     %d piezas' % n)\n\n    # ---------------------------------------------------------------- 5. conexiones\n    def conexiones(self):\n        for cx in self.t['conexiones']:\n            nombre = nombre_param(cx.get('conexion'))\n            try:\n                tipo = norm(cx.get('tipo'))\n                if tipo == 'electrico':\n                    self.electrica(cx, nombre)\n                else:\n                    self.boquilla(cx, nombre, tipo)\n            except Exception as ex:\n                self.log.append(u'ERROR  3_Conexiones fila %d (%s): %s' % (cx['_fila'], nombre, txt_error(ex)))\n\n    def cara(self, el, normal, punto):\n        self.doc.Regenerate()\n        op = Options()\n        op.ComputeReferences = True\n        op.DetailLevel = ViewDetailLevel.Fine\n        mejor = None\n        for g in el.get_Geometry(op):\n            if isinstance(g, Solid):\n                for f in g.Faces:\n                    if isinstance(f, PlanarFace) and f.FaceNormal.DotProduct(normal) > 0.999 and \\\n                            abs(f.Origin.Subtract(punto).DotProduct(normal)) < 0.002:\n                        if mejor is None or f.Area > mejor.Area:\n                            mejor = f\n        if mejor is None:\n            raise Exception(u'no se encontro la cara para el conector')\n        return mejor\n\n    def ligar(self, el, bip, nombre):\n        self.fm.AssociateElementParameterToFamilyParameter(el.get_Parameter(bip), self.params[nombre])\n\n    def boquilla(self, cx, nombre, tipo):\n        d = cx.get('direccion').strip().upper()\n        n = vec(d)\n        eje = d[-1]\n        ku, kv = SEC[eje]\n        P = dict(zip(('X', 'Y', 'Z'), [num(cx.get(k)) for k in ('x', 'y', 'z')]))\n        L = num(cx.get('largoboquilla'), 150.0)\n        base = dict(P)\n        base[eje] = P[eje] - (L if d.startswith('+') else -L)\n        cu, cv = P[ku], P[kv]\n        redonda = tipo == 'tuberia' or norm(cx.get('forma')) == 'redonda'\n        brida = norm(cx.get('brida')) in SI\n        pre = nombre_param(self.prefijo, nombre)\n        g = GroupTypeId.Mechanical\n        if redonda:\n            dn = num(cx.get('diametro'))\n            pared = max(3.0, dn * 0.04)\n            od = dn * 1.2 + 105.0\n            e = round(18.0 + dn * 0.05, 1) if brida else 0.0\n            perno = 16.0 if dn <= 150 else 20.0\n            pos = []\n            if brida:\n                nb = 4 if dn <= 50 else (8 if dn <= 200 else 12)\n                bc = od - 40.0\n                pos = [(cu + bc / 2.0 * math.cos(math.pi / nb + 2 * math.pi * i / nb),\n                        cv + bc / 2.0 * math.sin(math.pi / nb + 2 * math.pi * i / nb)) for i in range(nb)]\n            hueco = lambda c: self.lazo_circ(eje, c, cu, cv, dn / 2.0)\n            cuerpo = lambda c: [self.lazo_circ(eje, c, cu, cv, dn / 2.0 + pared), hueco(c)]\n            plato = lambda c: [self.lazo_circ(eje, c, cu, cv, od / 2.0), hueco(c)]\n        else:\n            if tipo == 'ducto' and norm(cx.get('forma')) != 'redonda':\n                w, h = num(cx.get('ancho')), num(cx.get('alto'))\n            pared = 3.0\n            e = 10.0 if brida else 0.0\n            perno = 10.0\n            pos = []\n            if brida:\n                bu, bv = w + 40.0, h + 40.0\n                nu, nv = max(2, int(round(bu / 150.0)) + 1), max(2, int(round(bv / 150.0)) + 1)\n                us = [-bu / 2.0 + bu * i / (nu - 1) for i in range(nu)]\n                vs = [-bv / 2.0 + bv * i / (nv - 1) for i in range(nv)]\n                pos = [(cu + a, cv + b) for a in us for b in vs if a in (us[0], us[-1]) or b in (vs[0], vs[-1])]\n            hueco = lambda c: self.lazo_rect(eje, c, cu, cv, w, h)\n            cuerpo = lambda c: [self.lazo_rect(eje, c, cu, cv, w + 2 * pared, h + 2 * pared), hueco(c)]\n            plato = lambda c: [self.lazo_rect(eje, c, cu, cv, w + 80.0, h + 80.0), hueco(c)]\n\n        # parametros: largo de la boquilla (mueve brida, pernos y conector) y tamano del conector\n        self.nuevo_param(pre + u'_Largo', 'Length', g, False, L * MM)\n        self.nuevo_param(pre + u'_Brida_Espesor', 'Length', g, False, max(e, 0.5) * MM)\n        self.nuevo_param(pre + u'_Brida_Inicio', 'Length', g, False, formula=pre + u'_Largo - ' + pre + u'_Brida_Espesor')\n        if brida:\n            self.nuevo_param(pre + u'_Tuerca_Alto', 'Length', g, False, perno * 0.8 * MM)\n            self.nuevo_param(pre + u'_Perno_Saliente', 'Length', g, False, (e + perno * 1.5) * MM)\n            self.nuevo_param(pre + u'_Tuerca_Inicio', 'Length', g, False,\n                             formula=pre + u'_Brida_Inicio - ' + pre + u'_Tuerca_Alto')\n            self.nuevo_param(pre + u'_Perno_Fin', 'Length', g, False,\n                             formula=pre + u'_Largo + ' + pre + u'_Perno_Saliente')\n        if redonda:\n            self.nuevo_param(pre + u'_DN', 'PipeSize' if tipo == 'tuberia' else 'DuctSize', g, False, dn * MM)\n            self.nuevo_param(pre + u'_Radio', 'PipeSize' if tipo == 'tuberia' else 'DuctSize', g, False,\n                             formula=pre + u'_DN / 2')\n        else:\n            self.nuevo_param(pre + u'_Ancho', 'DuctSize', g, False, w * MM)\n            self.nuevo_param(pre + u'_Alto', 'DuctSize', g, False, h * MM)\n\n        c0 = base[eje]\n        origen = pt(base)\n        tubo = self.extruir(cuerpo(c0), n, origen, L - e if brida else L)\n        self.estilo(tubo, 'Conexiones', u'')\n        self.ligar(tubo, BuiltInParameter.EXTRUSION_END_PARAM, pre + (u'_Brida_Inicio' if brida else u'_Largo'))\n        cara_el = tubo\n        if brida:\n            agujeros = [self.lazo_circ(eje, c0, a, b, (perno + 2.0) / 2.0) for a, b in pos]\n            pl = self.extruir(plato(c0) + agujeros, n, origen, L, L - e)\n            self.estilo(pl, 'Conexiones', u'')\n            self.ligar(pl, BuiltInParameter.EXTRUSION_START_PARAM, pre + u'_Brida_Inicio')\n            self.ligar(pl, BuiltInParameter.EXTRUSION_END_PARAM, pre + u'_Largo')\n            tuercas = []\n            for a, b in pos:\n                R = perno * 1.6 / math.sqrt(3.0)\n                tuercas.append(self.poligono(eje, c0, [(a + R * math.cos(math.pi / 3 * i), b + R * math.sin(math.pi / 3 * i)) for i in range(6)]))\n            tu = self.extruir(tuercas, n, origen, L - e, L - e - perno * 0.8)\n            self.estilo(tu, 'Conexiones', u'', u'medio')\n            self.ligar(tu, BuiltInParameter.EXTRUSION_START_PARAM, pre + u'_Tuerca_Inicio')\n            self.ligar(tu, BuiltInParameter.EXTRUSION_END_PARAM, pre + u'_Brida_Inicio')\n            varillas = [self.lazo_circ(eje, c0, a, b, perno / 2.0) for a, b in pos]\n            es = self.extruir(varillas, n, origen, L + e + perno * 1.5, L - e - perno * 0.8)\n            self.estilo(es, 'Conexiones', u'', u'medio')\n            self.ligar(es, BuiltInParameter.EXTRUSION_START_PARAM, pre + u'_Tuerca_Inicio')\n            self.ligar(es, BuiltInParameter.EXTRUSION_END_PARAM, pre + u'_Perno_Fin')\n            cara_el = pl\n        punto = pt(P)\n        f = self.cara(cara_el, n, punto)\n        if tipo == 'tuberia':\n            sis = getattr(PipeSystemType, SIS_TUBERIA.get(norm(cx.get('sistema')), 'OtherPipe'), PipeSystemType.OtherPipe)\n            ce = ConnectorElement.CreatePipeConnector(self.doc, sis, f.Reference)\n            try:\n                self.ligar(ce, BuiltInParameter.CONNECTOR_RADIUS, pre + u'_Radio')\n            except Exception:\n                self.ligar(ce, BuiltInParameter.CONNECTOR_DIAMETER, pre + u'_DN')\n            flujo_bip = BuiltInParameter.RBS_PIPE_FLOW_DIRECTION_PARAM\n        else:\n            sis = getattr(DuctSystemType, SIS_DUCTO.get(norm(cx.get('sistema')), 'OtherAir'), None) or DuctSystemType.SupplyAir\n            perfil = ConnectorProfileType.Round if redonda else ConnectorProfileType.Rectangular\n            ce = ConnectorElement.CreateDuctConnector(self.doc, sis, perfil, f.Reference)\n            if redonda:\n                try:\n                    self.ligar(ce, BuiltInParameter.CONNECTOR_RADIUS, pre + u'_Radio')\n                except Exception:\n                    self.ligar(ce, BuiltInParameter.CONNECTOR_DIAMETER, pre + u'_DN')\n            else:\n                self.ligar(ce, BuiltInParameter.CONNECTOR_WIDTH, pre + u'_Ancho')\n                self.ligar(ce, BuiltInParameter.CONNECTOR_HEIGHT, pre + u'_Alto')\n            flujo_bip = BuiltInParameter.RBS_DUCT_FLOW_DIRECTION_PARAM\n        self.flujo(ce, flujo_bip, cx.get('flujo'))\n        self.descripcion(ce, u'%s %s' % (nombre, cx.get('sistema') or u''))\n        self.log.append(u'OK     conexion %s (%s%s, %d pernos)' % (nombre, cx.get('tipo'), u' con brida' if brida else u'', len(pos)))\n\n    def poligono(self, eje, coord, pts):\n        ku, kv = SEC[eje]\n        p = [pt({eje: coord, ku: a, kv: b}) for a, b in pts]\n        ca = CurveArray()\n        for i in range(len(p)):\n            ca.Append(Line.CreateBound(p[i], p[(i + 1) % len(p)]))\n        return ca\n\n    def electrica(self, cx, nombre):\n        d = cx.get('direccion').strip().upper()\n        n = vec(d)\n        eje = d[-1]\n        ku, kv = SEC[eje]\n        P = dict(zip(('X', 'Y', 'Z'), [num(cx.get(k)) for k in ('x', 'y', 'z')]))\n        L = num(cx.get('largoboquilla'), 40.0) or 40.0\n        base = dict(P)\n        base[eje] = P[eje] - (L if d.startswith('+') else -L)\n        caja = self.extruir([self.lazo_rect(eje, base[eje], P[ku], P[kv], 100.0, 100.0)], n, pt(base), L)\n        self.estilo(caja, 'Conexiones', u'')\n        pre = nombre_param(self.prefijo, nombre)\n        g = getattr(GroupTypeId, 'ElectricalLoads', GroupTypeId.Electrical)\n        v = num(cx.get('tensionv'), 220.0)\n        kw = num(cx.get('potenciakw'), 0.0)\n        self.nuevo_param(pre + u'_Tension', 'ElectricalPotential', g, False,\n                         UnitUtils.ConvertToInternalUnits(v, UnitTypeId.Volts))\n        self.nuevo_param(pre + u'_Polos', 'Int.NumberOfPoles', g, False, 3 if v >= 380 else 1)\n        self.nuevo_param(pre + u'_Carga_VA', 'ApparentPower', g, False,\n                         UnitUtils.ConvertToInternalUnits(kw * 1000.0 / 0.8, UnitTypeId.VoltAmperes))\n        f = self.cara(caja, n, pt(P))\n        ce = ConnectorElement.CreateElectricalConnector(self.doc, ElectricalSystemType.PowerBalanced, f.Reference)\n        self.ligar(ce, BuiltInParameter.RBS_ELEC_VOLTAGE, pre + u'_Tension')\n        self.ligar(ce, BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES, pre + u'_Polos')\n        self.ligar(ce, BuiltInParameter.RBS_ELEC_APPARENT_LOAD, pre + u'_Carga_VA')\n        self.descripcion(ce, u'%s %.0f V %.1f kW' % (nombre, v, kw))\n        self.log.append(u'OK     conexion electrica %s (%.0f V, %.1f kW)' % (nombre, v, kw))\n\n    def flujo(self, ce, bip, valor):\n        m = {'entra': 1, 'entrada': 1, 'sale': 2, 'salida': 2, 'ambos': 0}\n        if norm(valor) in m:\n            try:\n                ce.get_Parameter(bip).Set(m[norm(valor)])\n            except Exception:\n                pass\n\n    def descripcion(self, ce, texto):\n        try:\n            ce.get_Parameter(BuiltInParameter.RBS_CONNECTOR_DESCRIPTION).Set(texto)\n        except Exception:\n            pass\n\n    # ---------------------------------------------------------------- guardar y cargar\n    def guardar(self, carpeta):\n        if not os.path.isdir(carpeta):\n            os.makedirs(carpeta)\n        ruta = os.path.join(carpeta, nombre_param(self.f.get('nombrearchivo')) + u'.rfa')\n        op = SaveAsOptions()\n        op.OverwriteExistingFile = True\n        op.MaximumBackups = 1\n        self.doc.SaveAs(ruta, op)\n        self.log.append(u'OK     guardado: %s' % ruta)\n        return ruta\n\n    def cargar(self, proyecto):\n        try:\n            fam = self.doc.LoadFamily(proyecto, opciones_carga())\n            self.log.append(u'OK     cargada en el proyecto: %s' % fam.Name)\n        except Exception as ex:\n            self.log.append(u'AVISO  no se pudo cargar (%s). Cargala a mano: Insertar > Cargar familia.' % txt_error(ex))\n\n    def ejecutar(self, carpeta, planta, alzado, proyecto):\n        self.doc = self.app.NewFamilyDocument(self.plantilla())\n        self.fm = self.doc.FamilyManager\n        try:\n            self.paso(u'familia', self.base)\n            self.paso(u'parametros', self.parametros)\n            if planta or alzado:\n                try:\n                    self.paso(u'planos', lambda: self.planos(planta, alzado))\n                except Exception as ex:\n                    self.log.append(u'AVISO  planos: %s' % txt_error(ex))\n            self.paso(u'piezas', self.piezas)\n            self.paso(u'conexiones', self.conexiones)\n            ruta = self.guardar(carpeta)\n            if proyecto is not None:\n                self.cargar(proyecto)\n            return ruta\n        finally:\n            try:\n                self.doc.Close(False)\n            except Exception:\n                pass\n\n\ndef opciones_carga():\n    def encontrada(self, enUso, sobrescribir):\n        try:\n            sobrescribir.Value = True\n            return True\n        except Exception:\n            return (True, True)\n\n    def compartida(self, compartida, enUso, origen, sobrescribir):\n        try:\n            origen.Value = FamilySource.Family\n            sobrescribir.Value = True\n            return True\n        except Exception:\n            return (True, FamilySource.Family, True)\n    cls = type('AdlbOpcionesCarga', (IFamilyLoadOptions,),\n               {'OnFamilyFound': encontrada, 'OnSharedFamilyFound': compartida,\n                '__namespace__': 'ADLB_%d' % int(time.time() * 1000)})\n    return cls()\n\n\ndef leer_tablas(ruta):\n    h = leer_excel(ruta)\n\n    def hoja(*claves):\n        for k in claves:\n            if k in h:\n                return h[k]\n        return []\n    familia = {}\n    for fila in hoja('1familia', 'familia'):\n        familia[norm(fila.get('campo'))] = fila.get('valor')\n    return {'familia': familia, 'piezas': hoja('2piezas', 'piezas'),\n            'conexiones': hoja('3conexiones', 'conexiones'), 'parametros': hoja('4parametros', 'parametros')}\n\n\n# ============================================================================ nodo\nruta_excel = IN[0]\ncarpeta = IN[1]\nplanta = IN[2] if len(IN) > 2 and IN[2] else None\nalzado = IN[3] if len(IN) > 3 and IN[3] else None\ncargar_proyecto = bool(IN[4]) if len(IN) > 4 else True\nsolo_validar = bool(IN[5]) if len(IN) > 5 else True\nejecutar = bool(IN[6]) if len(IN) > 6 else False\n\nif not ejecutar:\n    OUT = [u'EJECUTAR = False. Revisa las entradas y ponlo en True.']\nelif not ruta_excel or not os.path.exists(u'%s' % ruta_excel):\n    OUT = [u'ERROR  No se encuentra el Excel: %s' % ruta_excel]\nelse:\n    log = []\n    tablas = leer_tablas(u'%s' % ruta_excel)\n    log.append(u'Excel: %d piezas, %d conexiones, %d parametros' % (\n        len(tablas['piezas']), len(tablas['conexiones']), len(tablas['parametros'])))\n    errores = validar(tablas, log)\n    ruta = None\n    if solo_validar:\n        resumen = u'VALIDACION: %d errores. %s' % (errores, u'Listo para generar: pon SOLO VALIDAR = False.'\n                                                   if errores == 0 else u'Corrige el Excel y vuelve a validar.')\n    elif errores:\n        resumen = u'NO SE GENERO: el Excel tiene %d errores. Revisa las lineas ERROR.' % errores\n    else:\n        doc = DocumentManager.Instance.CurrentDBDocument\n        app = DocumentManager.Instance.CurrentUIApplication.Application\n        TransactionManager.Instance.ForceCloseTransaction()\n        try:\n            ruta = Generador(app, tablas, log).ejecutar(u'%s' % carpeta, planta, alzado,\n                                                        doc if (cargar_proyecto and not doc.IsFamilyDocument) else None)\n        except Exception as ex:\n            log.append(u'ERROR  %s' % txt_error(ex))\n        n_err = len([l for l in log if l.startswith(u'ERROR')])\n        resumen = u'FAMILIA GENERADA con %d errores' % n_err if ruta else u'NO SE GENERO la familia'\n    OUT = [resumen, ruta] + log\n    try:\n        if carpeta and os.path.isdir(u'%s' % carpeta):\n            with io.open(os.path.join(u'%s' % carpeta, u'ADLB_registro.txt'), 'w', encoding='utf-8') as fh:\n                fh.write(u'\\n'.join([u'%s' % x for x in OUT]))\n    except Exception:\n        pass\n",
+      "Engine": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "f66af552fcac4715aadaf39aadf76191",
+      "Inputs": [
+        {
+          "Id": "766be1233aeb4d4aa95e93ba06528893",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "feec4d0eba534f9ab1dfa212dd01f168",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "dd22d0085e7c485c969a93bf9cfeb10a",
+          "Name": "IN[2]",
+          "Description": "Input #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "6c718c5b3664408a972bf8435503ac7a",
+          "Name": "IN[3]",
+          "Description": "Input #3",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "eb08533370af4ad3bf53f83c056553bb",
+          "Name": "IN[4]",
+          "Description": "Input #4",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "c2bb0328684344c1bfd7d291ebad3a3a",
+          "Name": "IN[5]",
+          "Description": "Input #5",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "4f547bf5d4934e159eea4d3eaaa3e4b9",
+          "Name": "IN[6]",
+          "Description": "Input #6",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "55593e34032d486c8ddced18e1f931d2",
+          "Name": "OUT",
+          "Description": "Registro",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "ADLB - generar familia desde Excel"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "NodeType": "ExtensionNode",
+      "Id": "6988de991ae34286b21ce621a8e824dc",
+      "Inputs": [
+        {
+          "Id": "fb4f76ab6c994bcc87b617032d132006",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "120985c58a7a4d349ec3d3fc74c14444",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Registro"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "a1ee47057add4c2fb709252892830150",
+      "End": "766be1233aeb4d4aa95e93ba06528893",
+      "Id": "d6ad53126258483e972787c50f8a5924",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "d9d3091c99c74cb0a06792e4113ca985",
+      "End": "feec4d0eba534f9ab1dfa212dd01f168",
+      "Id": "0671193d29a04864a8c5ebcbecc7452d",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "e6a1eb44321344f289142b9fedfe8a1f",
+      "End": "dd22d0085e7c485c969a93bf9cfeb10a",
+      "Id": "e822c654254a4b7f859e6e945a78ccb9",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "c271d9ada62449c7830c6264b668e0c0",
+      "End": "6c718c5b3664408a972bf8435503ac7a",
+      "Id": "03c62d2e1c4f48d3aee65df07e8a6f37",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "3049ff3cbca441cdbfa8f631bab3ecb2",
+      "End": "eb08533370af4ad3bf53f83c056553bb",
+      "Id": "65ad206c769a49f7bea10b4806affc7b",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "0fc394e7e54b4315bad63b9c359ee3ef",
+      "End": "c2bb0328684344c1bfd7d291ebad3a3a",
+      "Id": "5391dd01c31542fd8a043e4609fd4af9",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "2986f5067d4b4eeb822a42de49d5f3cc",
+      "End": "4f547bf5d4934e159eea4d3eaaa3e4b9",
+      "Id": "e1048e5ee81c468ba9c866b170fcb6da",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "55593e34032d486c8ddced18e1f931d2",
+      "End": "fb4f76ab6c994bcc87b617032d132006",
+      "Id": "89d87de9752e42858fd5463c88c22375",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [],
+  "Author": "ADLB",
+  "Linting": {},
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.17.0.3472",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "3ff92db75e674a32866321187000f419",
+        "Name": "1 - Excel de la familia",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 0
+      },
+      {
+        "Id": "d93984a62bef4946b20a43d512584171",
+        "Name": "2 - Carpeta de salida",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 130
+      },
+      {
+        "Id": "5f0925a2e3014c05805f0456d5403190",
+        "Name": "3 - Plano de PLANTA .dwg/.dxf (opcional)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 260
+      },
+      {
+        "Id": "b84d6a78bff4446d912c67af4411bcb4",
+        "Name": "4 - Plano de ALZADO frontal .dwg/.dxf (opcional)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 390
+      },
+      {
+        "Id": "8199c92a94da4edb9687e2e8752c5506",
+        "Name": "5 - Cargar en el proyecto",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 520
+      },
+      {
+        "Id": "f630185bc7df401491332448a9c3f604",
+        "Name": "6 - SOLO VALIDAR",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 630
+      },
+      {
+        "Id": "97a26ae3bf874ed69142c96e1fcb4943",
+        "Name": "7 - EJECUTAR",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 740
+      },
+      {
+        "Id": "f66af552fcac4715aadaf39aadf76191",
+        "Name": "ADLB - Generar familia",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 560,
+        "Y": 320
+      },
+      {
+        "Id": "6988de991ae34286b21ce621a8e824dc",
+        "Name": "Registro",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 940,
+        "Y": 320
+      }
+    ],
+    "Annotations": [
+      {
+        "Id": "50f146dcb3f6423f91598fd57c778d14",
+        "Title": "ADLB · Generar familia desde Excel\n1. Abre Dynamo desde tu PROYECTO (no desde una familia).\n2. Elige el Excel y la carpeta de salida. Los planos son opcionales.\n3. SOLO VALIDAR = True y EJECUTAR = True  ->  Ejecutar. Corrige el Excel hasta 0 errores.\n4. SOLO VALIDAR = False  ->  Ejecutar. La familia se guarda y se carga en el proyecto.",
+        "DescriptionText": null,
+        "IsExpanded": true,
+        "WidthAdjustment": 0.0,
+        "HeightAdjustment": 0.0,
+        "Nodes": [],
+        "HasNestedGroups": false,
+        "Left": 0.0,
+        "Top": -200.0,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 14.0,
+        "GroupStyleId": "00000000-0000-0000-0000-000000000000",
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFE76A1F"
+      }
+    ],
+    "X": 60.0,
+    "Y": 260.0,
+    "Zoom": 0.7
+  }
+}

@@ -1,17 +1,17 @@
-ADLB · Automatiza tus familias de Revit · Plantilla base de Dynamo
-====================================================================
+ADLB · Automatiza tus familias de Revit
+=======================================
 
 Archivos
-  ADLB_Parametros_desde_CSV.dyn   grafico de Dynamo listo para abrir
-  ADLB_Parametros_desde_CSV.py    codigo del nodo Python (el mismo que trae el .dyn)
-  ADLB_Parametros_ejemplo.csv     tabla de ejemplo para copiar y editar
+  ADLB_Plantilla_Familia.xlsx   el Excel que llenas (trae un equipo de ejemplo)
+  ADLB_Generar_Familia.dyn      el grafico de Dynamo
+  ADLB_Generar_Familia.py       el codigo del nodo (ya viene dentro del .dyn)
 
-Uso rapido
-  1. Abre la familia (.rfa) en el Editor de familias de Revit.
-  2. Gestionar > Dynamo (desde la familia) y abre ADLB_Parametros_desde_CSV.dyn.
-  3. Elige el CSV (y el archivo de parametros compartidos si lo usas).
-  4. Corre con SIMULAR = True y EJECUTAR = True. Lee el registro.
-  5. Si todo esta bien, SIMULAR = False y vuelve a ejecutar. Ctrl+Z deshace todo.
+En 5 pasos
+  1. Prepara tu dibujo: mm, origen en 0,0 y piso en Y=0 en el alzado. Planta y alzado en archivos separados.
+  2. Llena el Excel: 1_Familia, 2_Piezas, 3_Conexiones, 4_Parametros. Pasa el mouse por los encabezados.
+  3. Nombra los parametros: PREFIJO_Concepto_Unidad (EQ_Peso_kg).
+  4. Abre Dynamo DESDE TU PROYECTO > ADLB_Generar_Familia.dyn > elige Excel y carpeta.
+     SOLO VALIDAR = True, EJECUTAR = True > Ejecutar. Con 0 errores: SOLO VALIDAR = False > Ejecutar.
+  5. Revisa la familia con la checklist del PDF.
 
-Requisitos: Revit 2022+ y Dynamo 2.x con motor CPython3. Sin paquetes externos.
-La guia completa y la checklist estan en el PDF del kit.
+Requisitos: Revit 2022+, Dynamo 2.x (CPython3). Sin paquetes externos.
