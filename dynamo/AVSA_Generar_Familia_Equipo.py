@@ -27,7 +27,12 @@ load_into_project = bool(IN[3])
 run = bool(IN[4])
 template = IN[5] if len(IN) > 5 else None
 
+if not str(spec_path).lower().endswith('.py'):
+    raise Exception(u'IN[0] debe ser el spec .py (...\\dynamo\\specs\\spec_*.py), no: %s' % spec_path)
 lib_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(spec_path))), 'lib')
+if not os.path.exists(os.path.join(lib_dir, 'ad_family_builder.py')):
+    raise Exception(u'No se encontro %s\\ad_family_builder.py. El spec debe estar en ...\\dynamo\\specs\\ '
+                    u'junto a la carpeta ...\\dynamo\\lib\\' % lib_dir)
 if lib_dir not in sys.path:
     sys.path.insert(0, lib_dir)
 
