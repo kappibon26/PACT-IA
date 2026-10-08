@@ -1,0 +1,403 @@
+{
+  "Uuid": "e553537a-1042-4ca8-af00-f9945b4285b2",
+  "IsCustomNode": false,
+  "Description": "AVSA - generador de familias de equipos",
+  "Name": "AVSA_Generar_Familia_Equipo",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "HintPath": "C:\\RUTA\\PACT-IA\\dynamo\\specs\\spec_PEL01_CPM7730.py",
+      "InputValue": "C:\\RUTA\\PACT-IA\\dynamo\\specs\\spec_PEL01_CPM7730.py",
+      "NodeType": "ExtensionNode",
+      "Id": "9b0b0028a9da4ab28ae5d70a60b4e76f",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "659d45145c2047b2b4c9a0403a345cb6",
+          "Name": "",
+          "Description": "Ruta",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "1 - Spec del equipo (.py)"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.Directory, CoreNodeModels",
+      "HintPath": "C:\\RUTA\\Dynamo_BIM_Claude\\familias\\equipos",
+      "InputValue": "C:\\RUTA\\Dynamo_BIM_Claude\\familias\\equipos",
+      "NodeType": "ExtensionNode",
+      "Id": "fd096c2ef50944e3b09ae1488a3c8f4b",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "00d2ff1535544aa1952dbae6edb54a68",
+          "Name": "",
+          "Description": "Ruta",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "2 - Carpeta de salida .rfa"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "HintPath": "C:\\RUTA\\Dynamo_BIM_Claude\\AVSA_Parametros_Compartidos.txt",
+      "InputValue": "C:\\RUTA\\Dynamo_BIM_Claude\\AVSA_Parametros_Compartidos.txt",
+      "NodeType": "ExtensionNode",
+      "Id": "1a1be0ce67b345d6b4ea899ec1cfd994",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "3d075dafabbe445fa9ed47465ef2233e",
+          "Name": "",
+          "Description": "Ruta",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "3 - Parametros compartidos"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "NodeType": "BooleanInputNode",
+      "InputValue": true,
+      "Id": "0426cda8001641c5a319e7b3b0b20288",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "9d995c60e026498f81a75e0550232b2d",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "4 - Cargar en el proyecto"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "NodeType": "BooleanInputNode",
+      "InputValue": false,
+      "Id": "a1836fbe457648b8a69c3d3ffb44b38a",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "45b7eddf5739409486b59be6dac8bc12",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "5 - EJECUTAR"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.StringInput, CoreNodeModels",
+      "NodeType": "StringInputNode",
+      "InputValue": "",
+      "Id": "3ae5fe1b7e594323910333240488f9fd",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "19b39077ab4646cd8e9570f94ec904d8",
+          "Name": "",
+          "Description": "String",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "6 - Plantilla .rft (vacio = automatica)"
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "Code": "# -*- coding: utf-8 -*-\n\"\"\"\nNodo Python de Dynamo (CPython3 o IronPython2) - AVSA: generar familia de equipo desde un spec.\n\nEntradas:\n  IN[0]  ruta del spec            p.ej. ...\\\\PACT-IA\\\\dynamo\\\\specs\\\\spec_PEL01_CPM7730.py\n  IN[1]  carpeta de salida .rfa   p.ej. ...\\\\Dynamo_BIM_Claude\\\\familias\\\\equipos\n  IN[2]  archivo de parametros compartidos  ...\\\\Dynamo_BIM_Claude\\\\AVSA_Parametros_Compartidos.txt\n  IN[3]  cargar en el proyecto abierto (bool)\n  IN[4]  ejecutar (bool)  -> poner en False para que Dynamo no regenere la familia en cada cambio\n  IN[5]  (opcional) ruta de la plantilla .rft si no se encuentra automaticamente\nSalida:\n  OUT    lista de lineas de registro (OK / AVISO / ERROR) + ruta del .rfa\n\"\"\"\nimport sys\nimport os\nimport clr\n\nclr.AddReference('RevitServices')\nfrom RevitServices.Persistence import DocumentManager\nfrom RevitServices.Transactions import TransactionManager\n\nspec_path = IN[0]\nout_dir = IN[1]\nshared_params = IN[2]\nload_into_project = bool(IN[3])\nrun = bool(IN[4])\ntemplate = IN[5] if len(IN) > 5 else None\n\nlib_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(spec_path))), 'lib')\nif lib_dir not in sys.path:\n    sys.path.insert(0, lib_dir)\n\nimport ad_family_builder as afb\ntry:                                   # recargar la libreria si se edito con Dynamo abierto\n    import importlib\n    afb = importlib.reload(afb)\nexcept Exception:\n    afb = reload(afb)                  # noqa: F821  (IronPython)\n\nif not run:\n    OUT = ['Ejecutar = False. Revise las entradas y ponga Ejecutar = True.']\nelse:\n    doc = DocumentManager.Instance.CurrentDBDocument\n    app = DocumentManager.Instance.CurrentUIApplication.Application\n    log = afb.Log()\n    rfa = None\n    try:\n        spec = afb.load_spec(spec_path)\n        TransactionManager.Instance.ForceCloseTransaction()\n        builder = afb.FamilyBuilder(app, spec, shared_params, template, log)\n        rfa = builder.run(out_dir, doc if load_into_project else None)\n    except Exception as ex:\n        log.err(u'Ejecucion detenida', ex)\n    resumen = u'RESUMEN: %d errores, %d avisos' % (log.errores, log.avisos)\n    OUT = [resumen, rfa] + log.lines\n",
+      "Engine": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "fd1d7568151d4a3cbe749cd1f766a234",
+      "Inputs": [
+        {
+          "Id": "0087904d8de5488f8d8c4fb00ceb488e",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "05cc4ebed7d249ada796753547a0972f",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "92124cd28da042e181a002136a777fa0",
+          "Name": "IN[2]",
+          "Description": "Input #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "724ac66ac99d4f95bd31e5745e5b15cc",
+          "Name": "IN[3]",
+          "Description": "Input #3",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "7d2d60bb5bdf4d6c8c19a5aa7d871e6b",
+          "Name": "IN[4]",
+          "Description": "Input #4",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "541214af81b749f3bc1f2f9c0c1bd7d3",
+          "Name": "IN[5]",
+          "Description": "Input #5",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "098b4ffa03b54982b3ac281575b4b848",
+          "Name": "OUT",
+          "Description": "Result of the python script",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "AVSA - generar familia de equipo"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "NodeType": "ExtensionNode",
+      "Id": "e5e96e26287048cdba43ecc2893d6b31",
+      "Inputs": [
+        {
+          "Id": "155cb58d941f4f2695e19ef9d25d4b06",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "509d490dde4846a4831fa9f9dc8cdc8b",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Registro"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "659d45145c2047b2b4c9a0403a345cb6",
+      "End": "0087904d8de5488f8d8c4fb00ceb488e",
+      "Id": "8665c4b5fe1e4f24bcec477335edb8ef",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "00d2ff1535544aa1952dbae6edb54a68",
+      "End": "05cc4ebed7d249ada796753547a0972f",
+      "Id": "0e0d3f5d503a4e34a62668011a5248bf",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "3d075dafabbe445fa9ed47465ef2233e",
+      "End": "92124cd28da042e181a002136a777fa0",
+      "Id": "4b027ab618414fb693fcc32cf54e076a",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "9d995c60e026498f81a75e0550232b2d",
+      "End": "724ac66ac99d4f95bd31e5745e5b15cc",
+      "Id": "0aadc0a1893f4fc4822cde71bab7b360",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "45b7eddf5739409486b59be6dac8bc12",
+      "End": "7d2d60bb5bdf4d6c8c19a5aa7d871e6b",
+      "Id": "2681e2dd3d39411aaa6f80c308c5be66",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "19b39077ab4646cd8e9570f94ec904d8",
+      "End": "541214af81b749f3bc1f2f9c0c1bd7d3",
+      "Id": "b29204888c454ba69d7f0e174dab3c63",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "098b4ffa03b54982b3ac281575b4b848",
+      "End": "155cb58d941f4f2695e19ef9d25d4b06",
+      "Id": "064d90de089c404b9dd10fc1783ea0d6",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [],
+  "Author": "AVSA",
+  "Linting": {},
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.17.0.3472",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "9b0b0028a9da4ab28ae5d70a60b4e76f",
+        "Name": "1 - Spec del equipo (.py)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 0
+      },
+      {
+        "Id": "fd096c2ef50944e3b09ae1488a3c8f4b",
+        "Name": "2 - Carpeta de salida .rfa",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 130
+      },
+      {
+        "Id": "1a1be0ce67b345d6b4ea899ec1cfd994",
+        "Name": "3 - Parametros compartidos",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 260
+      },
+      {
+        "Id": "0426cda8001641c5a319e7b3b0b20288",
+        "Name": "4 - Cargar en el proyecto",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 390
+      },
+      {
+        "Id": "a1836fbe457648b8a69c3d3ffb44b38a",
+        "Name": "5 - EJECUTAR",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 500
+      },
+      {
+        "Id": "3ae5fe1b7e594323910333240488f9fd",
+        "Name": "6 - Plantilla .rft (vacio = automatica)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 610
+      },
+      {
+        "Id": "fd1d7568151d4a3cbe749cd1f766a234",
+        "Name": "AVSA - Generar familia",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 520,
+        "Y": 250
+      },
+      {
+        "Id": "e5e96e26287048cdba43ecc2893d6b31",
+        "Name": "Registro",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 900,
+        "Y": 250
+      }
+    ],
+    "Annotations": [],
+    "X": 40.0,
+    "Y": 40.0,
+    "Zoom": 0.8
+  }
+}

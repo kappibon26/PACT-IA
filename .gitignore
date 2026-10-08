@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.dxf
+*.dwg
+*.0001.rfa
