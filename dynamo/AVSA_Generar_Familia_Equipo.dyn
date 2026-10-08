@@ -1,5 +1,5 @@
 {
-  "Uuid": "2d8ff223-b7f9-40e2-8040-3ca254714301",
+  "Uuid": "17c74118-0953-40cb-86e1-c14341a6ec32",
   "IsCustomNode": false,
   "Description": "AVSA - generador de familias de equipos",
   "Name": "AVSA_Generar_Familia_Equipo",
@@ -14,11 +14,11 @@
       "HintPath": "C:\\RUTA\\PACT-IA\\dynamo\\specs\\spec_PEL01_CPM7730.py",
       "InputValue": "C:\\RUTA\\PACT-IA\\dynamo\\specs\\spec_PEL01_CPM7730.py",
       "NodeType": "ExtensionNode",
-      "Id": "fbe59d2d5eaf4ecd8283851ee55027b7",
+      "Id": "9f0f5cc13cbd4b26974e9916a272d30c",
       "Inputs": [],
       "Outputs": [
         {
-          "Id": "f698c4b03b6640e596c7323b21faa153",
+          "Id": "9d03d41ad72a427bab95f96b64528069",
           "Name": "",
           "Description": "Ruta",
           "UsingDefaultValue": false,
@@ -35,11 +35,11 @@
       "HintPath": "C:\\RUTA\\Dynamo_BIM_Claude\\familias\\equipos",
       "InputValue": "C:\\RUTA\\Dynamo_BIM_Claude\\familias\\equipos",
       "NodeType": "ExtensionNode",
-      "Id": "fa9d4958fa7f4b80ac5c97c66c50a4b8",
+      "Id": "1b312b86b227462b82231037441b61e2",
       "Inputs": [],
       "Outputs": [
         {
-          "Id": "6f81fc95b43b4734952a5586de0df0a8",
+          "Id": "7987cacf49c74e66a702aa271be05152",
           "Name": "",
           "Description": "Ruta",
           "UsingDefaultValue": false,
@@ -56,11 +56,11 @@
       "HintPath": "C:\\RUTA\\Dynamo_BIM_Claude\\AVSA_Parametros_Compartidos.txt",
       "InputValue": "C:\\RUTA\\Dynamo_BIM_Claude\\AVSA_Parametros_Compartidos.txt",
       "NodeType": "ExtensionNode",
-      "Id": "984b2fb7d8104662be0d32d3a011542d",
+      "Id": "bb102a7a217244128d2d30cff9765111",
       "Inputs": [],
       "Outputs": [
         {
-          "Id": "b6ea266a8ce74d09a4cdb9b62f029be4",
+          "Id": "1ad897e7609d4d049bd0f8cd01bcb15d",
           "Name": "",
           "Description": "Ruta",
           "UsingDefaultValue": false,
@@ -76,11 +76,11 @@
       "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
       "NodeType": "BooleanInputNode",
       "InputValue": true,
-      "Id": "b8457d087fa84339a4ea847f96084363",
+      "Id": "1f1fd89fb2fd41e5b00fc9e1992d801c",
       "Inputs": [],
       "Outputs": [
         {
-          "Id": "d52323b9332f48d9963887f48b222e5f",
+          "Id": "5fbf33ac28f648409644b7a461fe2bdf",
           "Name": "",
           "Description": "Boolean",
           "UsingDefaultValue": false,
@@ -96,11 +96,11 @@
       "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
       "NodeType": "BooleanInputNode",
       "InputValue": false,
-      "Id": "e54bdb86622248bd85185285ecad43a0",
+      "Id": "49920189081d435fbc3d8d9385783c88",
       "Inputs": [],
       "Outputs": [
         {
-          "Id": "038704468f5b465db5348743a773c3bc",
+          "Id": "241eabc4f5aa46189baa7ab33c969d02",
           "Name": "",
           "Description": "Boolean",
           "UsingDefaultValue": false,
@@ -116,11 +116,11 @@
       "ConcreteType": "CoreNodeModels.Input.StringInput, CoreNodeModels",
       "NodeType": "StringInputNode",
       "InputValue": "",
-      "Id": "036ac533eaef4ed0ab31cfb286a0c0af",
+      "Id": "298a98d0f0934238873b5da641d616f4",
       "Inputs": [],
       "Outputs": [
         {
-          "Id": "1f3e03ffee034038bee99eb64df3cdb0",
+          "Id": "b039ca3dd2974259a0233bd2d83c3987",
           "Name": "",
           "Description": "String",
           "UsingDefaultValue": false,
@@ -138,10 +138,10 @@
       "Code": "# -*- coding: utf-8 -*-\n\"\"\"\nNodo Python de Dynamo (CPython3 o IronPython2) - AVSA: generar familia de equipo desde un spec.\n\nEntradas:\n  IN[0]  ruta del spec            p.ej. ...\\\\PACT-IA\\\\dynamo\\\\specs\\\\spec_PEL01_CPM7730.py\n  IN[1]  carpeta de salida .rfa   p.ej. ...\\\\Dynamo_BIM_Claude\\\\familias\\\\equipos\n  IN[2]  archivo de parametros compartidos  ...\\\\Dynamo_BIM_Claude\\\\AVSA_Parametros_Compartidos.txt\n  IN[3]  cargar en el proyecto abierto (bool)\n  IN[4]  ejecutar (bool)  -> poner en False para que Dynamo no regenere la familia en cada cambio\n  IN[5]  (opcional) ruta de la plantilla .rft si no se encuentra automaticamente\nSalida:\n  OUT    lista de lineas de registro (OK / AVISO / ERROR) + ruta del .rfa\n\"\"\"\nimport sys\nimport os\nimport clr\n\nclr.AddReference('RevitServices')\nfrom RevitServices.Persistence import DocumentManager\nfrom RevitServices.Transactions import TransactionManager\n\nspec_path = IN[0]\nout_dir = IN[1]\nshared_params = IN[2]\nload_into_project = bool(IN[3])\nrun = bool(IN[4])\ntemplate = IN[5] if len(IN) > 5 else None\n\nif not str(spec_path).lower().endswith('.py'):\n    raise Exception(u'IN[0] debe ser el spec .py (...\\\\dynamo\\\\specs\\\\spec_*.py), no: %s' % spec_path)\nlib_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(spec_path))), 'lib')\nif not os.path.exists(os.path.join(lib_dir, 'ad_family_builder.py')):\n    raise Exception(u'No se encontro %s\\\\ad_family_builder.py. El spec debe estar en ...\\\\dynamo\\\\specs\\\\ '\n                    u'junto a la carpeta ...\\\\dynamo\\\\lib\\\\' % lib_dir)\nif lib_dir not in sys.path:\n    sys.path.insert(0, lib_dir)\n\nimport ad_family_builder as afb\ntry:                                   # recargar la libreria si se edito con Dynamo abierto\n    import importlib\n    afb = importlib.reload(afb)\nexcept Exception:\n    afb = reload(afb)                  # noqa: F821  (IronPython)\n\nif not run:\n    OUT = ['Ejecutar = False. Revise las entradas y ponga Ejecutar = True.']\nelse:\n    doc = DocumentManager.Instance.CurrentDBDocument\n    app = DocumentManager.Instance.CurrentUIApplication.Application\n    log = afb.Log()\n    rfa = None\n    try:\n        spec = afb.load_spec(spec_path)\n        TransactionManager.Instance.ForceCloseTransaction()\n        builder = afb.FamilyBuilder(app, spec, shared_params, template, log)\n        rfa = builder.run(out_dir, doc if load_into_project else None)\n    except Exception as ex:\n        log.err(u'Ejecucion detenida', ex)\n    resumen = u'RESUMEN: %d errores, %d avisos' % (log.errores, log.avisos)\n    OUT = [resumen, rfa] + log.lines\n    try:                               # copia del registro junto al .rfa\n        import io\n        if not os.path.isdir(out_dir):\n            os.makedirs(out_dir)\n        with io.open(os.path.join(out_dir, os.path.splitext(os.path.basename(spec_path))[0] + '_registro.txt'),\n                     'w', encoding='utf-8') as f:\n            f.write(u'\\n'.join([u'%s' % x for x in OUT]))\n    except Exception:\n        pass\n",
       "Engine": "CPython3",
       "VariableInputPorts": true,
-      "Id": "a945e61c7b81463881712b7a6208d3ef",
+      "Id": "dfca7a122d17460b829e51580250e224",
       "Inputs": [
         {
-          "Id": "e63522a4685f49f9929078153d2a0733",
+          "Id": "4dfb4251ced74efbbbb9e555ff6acdef",
           "Name": "IN[0]",
           "Description": "Input #0",
           "UsingDefaultValue": false,
@@ -150,7 +150,7 @@
           "KeepListStructure": false
         },
         {
-          "Id": "10284f4d0f5449cd873b8b9f40dbff64",
+          "Id": "2770e61796294071bbb0ef0ba5ce8dd1",
           "Name": "IN[1]",
           "Description": "Input #1",
           "UsingDefaultValue": false,
@@ -159,7 +159,7 @@
           "KeepListStructure": false
         },
         {
-          "Id": "aefb02e5b3ca4cc88a144b9ea18f79e1",
+          "Id": "c05afb7ac6a649fd918b3637ec3b158a",
           "Name": "IN[2]",
           "Description": "Input #2",
           "UsingDefaultValue": false,
@@ -168,7 +168,7 @@
           "KeepListStructure": false
         },
         {
-          "Id": "f1910c5feb8d4d8f9e3cd3ac08e881c9",
+          "Id": "66a1891d3a5741978a66b00a0c65ec43",
           "Name": "IN[3]",
           "Description": "Input #3",
           "UsingDefaultValue": false,
@@ -177,7 +177,7 @@
           "KeepListStructure": false
         },
         {
-          "Id": "543f916d20544ba6acdfcd957f6ff057",
+          "Id": "168ec18d38c84579927212627b3fbbcd",
           "Name": "IN[4]",
           "Description": "Input #4",
           "UsingDefaultValue": false,
@@ -186,7 +186,7 @@
           "KeepListStructure": false
         },
         {
-          "Id": "a85cdb68c6aa45a98698a23b1a3d6741",
+          "Id": "6c8ae6143824490ea384925c811f8615",
           "Name": "IN[5]",
           "Description": "Input #5",
           "UsingDefaultValue": false,
@@ -197,7 +197,7 @@
       ],
       "Outputs": [
         {
-          "Id": "9eba0c452fb149a79ea9656c9002d367",
+          "Id": "cd0ff3436bb74d2eb19aadb2ba7da6b5",
           "Name": "OUT",
           "Description": "Result of the python script",
           "UsingDefaultValue": false,
@@ -212,10 +212,10 @@
     {
       "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
       "NodeType": "ExtensionNode",
-      "Id": "bb3d3e7fc259489d88b65fe27f2633f8",
+      "Id": "36c3c7dbb7b94cf1ab47da06ccbcd4d5",
       "Inputs": [
         {
-          "Id": "455ff2249d954862949d3632dc39029f",
+          "Id": "2b689c273e684588be95f46662294fd2",
           "Name": "",
           "Description": "Node to show output from",
           "UsingDefaultValue": false,
@@ -226,7 +226,7 @@
       ],
       "Outputs": [
         {
-          "Id": "0612835069be48f9be3a9efaead55523",
+          "Id": "4d6b0a0383014a1fbb3411a7a16605cc",
           "Name": "",
           "Description": "Node output",
           "UsingDefaultValue": false,
@@ -241,45 +241,45 @@
   ],
   "Connectors": [
     {
-      "Start": "f698c4b03b6640e596c7323b21faa153",
-      "End": "e63522a4685f49f9929078153d2a0733",
-      "Id": "52cd42ddb6d14303977ae2b67bb5d85d",
+      "Start": "9d03d41ad72a427bab95f96b64528069",
+      "End": "4dfb4251ced74efbbbb9e555ff6acdef",
+      "Id": "aaf5f832ca99493c9d5f1917ea2b7403",
       "IsHidden": "False"
     },
     {
-      "Start": "6f81fc95b43b4734952a5586de0df0a8",
-      "End": "10284f4d0f5449cd873b8b9f40dbff64",
-      "Id": "d27bff195ed745b5833dc036e65563d6",
+      "Start": "7987cacf49c74e66a702aa271be05152",
+      "End": "2770e61796294071bbb0ef0ba5ce8dd1",
+      "Id": "89ed36fef8944a92bcbb5faef3070b8b",
       "IsHidden": "False"
     },
     {
-      "Start": "b6ea266a8ce74d09a4cdb9b62f029be4",
-      "End": "aefb02e5b3ca4cc88a144b9ea18f79e1",
-      "Id": "79ee4e0119ae4dd6b4c3beeea0228ff5",
+      "Start": "1ad897e7609d4d049bd0f8cd01bcb15d",
+      "End": "c05afb7ac6a649fd918b3637ec3b158a",
+      "Id": "d2d393c881a94b5c9afca2bc3d6d9645",
       "IsHidden": "False"
     },
     {
-      "Start": "d52323b9332f48d9963887f48b222e5f",
-      "End": "f1910c5feb8d4d8f9e3cd3ac08e881c9",
-      "Id": "04c7280ecc33432ebf52a7df12ccb8c8",
+      "Start": "5fbf33ac28f648409644b7a461fe2bdf",
+      "End": "66a1891d3a5741978a66b00a0c65ec43",
+      "Id": "2940cb90ba76438f9c37f22b1807bbdc",
       "IsHidden": "False"
     },
     {
-      "Start": "038704468f5b465db5348743a773c3bc",
-      "End": "543f916d20544ba6acdfcd957f6ff057",
-      "Id": "f9d9e8bd38224ebda94ae22c259985c0",
+      "Start": "241eabc4f5aa46189baa7ab33c969d02",
+      "End": "168ec18d38c84579927212627b3fbbcd",
+      "Id": "eda6c5da18af417ba29ab6f4ec341c5a",
       "IsHidden": "False"
     },
     {
-      "Start": "1f3e03ffee034038bee99eb64df3cdb0",
-      "End": "a85cdb68c6aa45a98698a23b1a3d6741",
-      "Id": "7f7cc58c123c43edaad3f594674614fe",
+      "Start": "b039ca3dd2974259a0233bd2d83c3987",
+      "End": "6c8ae6143824490ea384925c811f8615",
+      "Id": "24f2123d8ff6451ba3f7cffa60c648e9",
       "IsHidden": "False"
     },
     {
-      "Start": "9eba0c452fb149a79ea9656c9002d367",
-      "End": "455ff2249d954862949d3632dc39029f",
-      "Id": "c8936a67ece141f3aa608b02baf14799",
+      "Start": "cd0ff3436bb74d2eb19aadb2ba7da6b5",
+      "End": "2b689c273e684588be95f46662294fd2",
+      "Id": "8faa49df56584c15aa1fe1f0bca86b39",
       "IsHidden": "False"
     }
   ],
@@ -315,7 +315,7 @@
     "ConnectorPins": [],
     "NodeViews": [
       {
-        "Id": "fbe59d2d5eaf4ecd8283851ee55027b7",
+        "Id": "9f0f5cc13cbd4b26974e9916a272d30c",
         "Name": "1 - Spec del equipo (.py)",
         "IsSetAsInput": true,
         "IsSetAsOutput": false,
@@ -325,7 +325,7 @@
         "Y": 0
       },
       {
-        "Id": "fa9d4958fa7f4b80ac5c97c66c50a4b8",
+        "Id": "1b312b86b227462b82231037441b61e2",
         "Name": "2 - Carpeta de salida .rfa",
         "IsSetAsInput": true,
         "IsSetAsOutput": false,
@@ -335,7 +335,7 @@
         "Y": 130
       },
       {
-        "Id": "984b2fb7d8104662be0d32d3a011542d",
+        "Id": "bb102a7a217244128d2d30cff9765111",
         "Name": "3 - Parametros compartidos",
         "IsSetAsInput": true,
         "IsSetAsOutput": false,
@@ -345,7 +345,7 @@
         "Y": 260
       },
       {
-        "Id": "b8457d087fa84339a4ea847f96084363",
+        "Id": "1f1fd89fb2fd41e5b00fc9e1992d801c",
         "Name": "4 - Cargar en el proyecto",
         "IsSetAsInput": true,
         "IsSetAsOutput": false,
@@ -355,7 +355,7 @@
         "Y": 390
       },
       {
-        "Id": "e54bdb86622248bd85185285ecad43a0",
+        "Id": "49920189081d435fbc3d8d9385783c88",
         "Name": "5 - EJECUTAR",
         "IsSetAsInput": true,
         "IsSetAsOutput": false,
@@ -365,7 +365,7 @@
         "Y": 500
       },
       {
-        "Id": "036ac533eaef4ed0ab31cfb286a0c0af",
+        "Id": "298a98d0f0934238873b5da641d616f4",
         "Name": "6 - Plantilla .rft (vacio = automatica)",
         "IsSetAsInput": true,
         "IsSetAsOutput": false,
@@ -375,7 +375,7 @@
         "Y": 610
       },
       {
-        "Id": "a945e61c7b81463881712b7a6208d3ef",
+        "Id": "dfca7a122d17460b829e51580250e224",
         "Name": "AVSA - Generar familia",
         "IsSetAsInput": false,
         "IsSetAsOutput": false,
@@ -385,7 +385,7 @@
         "Y": 250
       },
       {
-        "Id": "bb3d3e7fc259489d88b65fe27f2633f8",
+        "Id": "36c3c7dbb7b94cf1ab47da06ccbcd4d5",
         "Name": "Registro",
         "IsSetAsInput": false,
         "IsSetAsOutput": false,

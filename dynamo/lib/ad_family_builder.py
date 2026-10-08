@@ -5,8 +5,10 @@ ad_family_builder - generador de familias de equipos AVSA desde Dynamo (Revit 20
 Lee un SPEC (dynamo/specs/spec_*.py) y crea un .rfa nuevo en segundo plano:
   1. plantilla de Equipos mecanicos (o generico + cambio de categoria)
   2. materiales, subcategorias y parametros (LOI compartidos ad-STD-AVSA-003 + parametros de la familia)
-  3. geometria LOD 350 (cajas, cilindros, transiciones, vacios de anclaje)
-  4. boquillas parametricas: proyeccion / brida / tamano del conector ligados a parametros de tipo
+  3. geometria LOD 350: extrusiones con perfiles compuestos (rectangulos, redondeados, circulos,
+     hexagonos, poligonos, canaletas en U, motores con aletas), huecos, transiciones y vacios
+  4. boquillas parametricas: tubo hueco, cuello, brida con agujeros, cara realzada, esparragos y tuercas;
+     proyeccion / espesores / tamano del conector ligados a parametros de tipo
   5. conectores MEP de tuberia, ducto y electricos sobre las caras de la geometria
   6. zonas de servicio con largo parametrico y Si/No de visibilidad
   7. guardar .rfa y (opcional) cargar en el proyecto abierto
@@ -23,7 +25,8 @@ import clr
 clr.AddReference('RevitAPI')
 from Autodesk.Revit.DB import (
     Arc, BuiltInCategory, BuiltInParameter, Category, Color, ConnectorElement, ConnectorProfileType,
-    CurveArray, CurveArrArray, ElementId, FamilyInstanceReferenceType, FilteredElementCollector,
+    CurveArray, CurveArrArray, ElementId, FamilyElementVisibility, FamilyElementVisibilityType,
+    FamilyInstanceReferenceType, FilteredElementCollector,
     FlowDirectionType, GroupTypeId, IFamilyLoadOptions, FamilySource, Line, Material, Options,
     PlanarFace, Plane, SaveAsOptions, SketchPlane, Solid, SolidSolidCutUtils, SpecTypeId,
     Transaction, UnitTypeId, UnitUtils, ViewDetailLevel, ViewPlan, ViewType, View, XYZ,
@@ -59,9 +62,12 @@ class Log(object):
 
 def _txt(x):
     try:
-        return u'%s' % x
+        t = u'%s' % x
     except Exception:
-        return repr(x)
+        t = repr(x)
+    if isinstance(x, Exception) or hasattr(x, 'Message'):
+        t = u'[%s] %s' % (x.__class__.__name__, t)
+    return t.replace(u'\r', u' ').replace(u'\n', u' | ')
 
 
 def xyz(p):
@@ -287,19 +293,30 @@ class FamilyBuilder(object):
             self.param(m['param'], 'Reference.Material', _gid('Materials'), False, self.mats.get(key))
 
     def _connection_params(self):
+        """Parametros de cada boquilla. Las posiciones se miden desde la base de la boquilla a lo largo
+        de su eje; todo cuelga de <id>_Proyeccion (cara de la brida = ubicacion del conector)."""
         g = _gid('Mechanical', 'Plumbing')
         for b in self.spec.get('boquillas', []):
             p = b['id']
-            self.param(p + '_Proyeccion', 'Length', g, False, b['proyeccion'] * MM)
-            self.param(p + '_Brida_Espesor', 'Length', g, False, b['e_brida'] * MM)
-            self.param(p + '_Brida_Inicio', 'Length', g, False,
-                       formula=p + '_Proyeccion - ' + p + '_Brida_Espesor')
+            L = lambda n: p + '_' + n
+            self.param(L('Proyeccion'), 'Length', g, False, b['proyeccion'] * MM)
+            self.param(L('Brida_Espesor'), 'Length', g, False, b['e_brida'] * MM)
+            self.param(L('RF_Alto'), 'Length', g, False, (b.get('rf') or {}).get('h', 0.0) * MM)
+            self.param(L('Cuello_Largo'), 'Length', g, False, (b.get('cuello') or {}).get('l', 0.0) * MM)
+            pr = b.get('pernos') or {}
+            self.param(L('Tuerca_Alto'), 'Length', g, False, pr.get('h', 0.0) * MM)
+            self.param(L('Perno_Saliente'), 'Length', g, False, pr.get('sale', 0.0) * MM)
+            self.param(L('RF_Inicio'), 'Length', g, False, formula=L('Proyeccion') + ' - ' + L('RF_Alto'))
+            self.param(L('Brida_Inicio'), 'Length', g, False, formula=L('RF_Inicio') + ' - ' + L('Brida_Espesor'))
+            self.param(L('Cuello_Inicio'), 'Length', g, False, formula=L('Brida_Inicio') + ' - ' + L('Cuello_Largo'))
+            self.param(L('Tuerca_Inicio'), 'Length', g, False, formula=L('Brida_Inicio') + ' - ' + L('Tuerca_Alto'))
+            self.param(L('Perno_Fin'), 'Length', g, False, formula=L('Proyeccion') + ' + ' + L('Perno_Saliente'))
             if b['seccion'] == 'circular':
-                self.param(p + '_DN', 'PipeSize', g, False, b['dn'] * MM)
-                self.param(p + '_Radio', 'PipeSize', g, False, formula=p + '_DN / 2')
+                self.param(L('DN'), 'PipeSize', g, False, b['dn'] * MM)
+                self.param(L('Radio'), 'PipeSize', g, False, formula=L('DN') + ' / 2')
             else:
-                self.param(p + '_Ancho', 'DuctSize', g, False, b['abertura'][0] * MM)
-                self.param(p + '_Alto', 'DuctSize', g, False, b['abertura'][1] * MM)
+                self.param(L('Ancho'), 'DuctSize', g, False, b['abertura'][0] * MM)
+                self.param(L('Alto'), 'DuctSize', g, False, b['abertura'][1] * MM)
 
     def _electrical_params(self):
         g = _gid('ElectricalLoads', 'Electrical')
@@ -325,13 +342,18 @@ class FamilyBuilder(object):
         return SketchPlane.Create(self.doc, Plane.CreateByNormalAndOrigin(normal, origin))
 
     @staticmethod
+    def _poly(points):
+        ca = CurveArray()
+        n = len(points)
+        for i in range(n):
+            ca.Append(Line.CreateBound(points[i], points[(i + 1) % n]))
+        return ca
+
+    @staticmethod
     def _rect(c, u, v, hu, hv):
         """Rectangulo centrado en c (XYZ), semilados hu/hv (pies) sobre ejes u/v (XYZ)."""
         p = [c.Add(u.Multiply(su * hu)).Add(v.Multiply(sv * hv)) for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
-        ca = CurveArray()
-        for i in range(4):
-            ca.Append(Line.CreateBound(p[i], p[(i + 1) % 4]))
-        return ca
+        return FamilyBuilder._poly(p)
 
     @staticmethod
     def _circle(c, u, v, r):
@@ -341,15 +363,65 @@ class FamilyBuilder(object):
         ca.Append(Arc.Create(b, a, c.Subtract(v.Multiply(r))))
         return ca
 
-    @staticmethod
-    def _arr(ca):
-        caa = CurveArrArray()
-        caa.Append(ca)
-        return caa
+    def _loop(self, lz, axis, coord):
+        """Lazo 2D del spec (coordenadas u, v en mm) -> CurveArray en el plano axis = coord."""
+        ku, kv = SEC[axis]
+        u, v = vec(ku), vec(kv)
+
+        def P(pu, pv):
+            return pt({axis: coord, ku: pu, kv: pv})
+        t = lz['t']
+        if t == 'rect':
+            return self._rect(P(*lz['c']), u, v, lz['d'][0] / 2 * MM, lz['d'][1] / 2 * MM)
+        if t == 'circ':
+            return self._circle(P(*lz['c']), u, v, lz['r'] * MM)
+        if t == 'poly':
+            return self._poly([P(a, b) for a, b in lz['pts']])
+        if t == 'hex':
+            cu, cv = lz['c']
+            R = lz['s'] / math.sqrt(3.0)
+            return self._poly([P(cu + R * math.cos(math.pi / 3 * i), cv + R * math.sin(math.pi / 3 * i))
+                               for i in range(6)])
+        if t == 'rrect':
+            cu, cv = lz['c']
+            hu, hv = lz['d'][0] / 2.0, lz['d'][1] / 2.0
+            r = min(lz['r'], hu - 0.5, hv - 0.5)
+            k = r * (1 - math.sqrt(0.5))
+            ca = CurveArray()
+            ca.Append(Line.CreateBound(P(cu - hu + r, cv - hv), P(cu + hu - r, cv - hv)))
+            ca.Append(Arc.Create(P(cu + hu - r, cv - hv), P(cu + hu, cv - hv + r), P(cu + hu - k, cv - hv + k)))
+            ca.Append(Line.CreateBound(P(cu + hu, cv - hv + r), P(cu + hu, cv + hv - r)))
+            ca.Append(Arc.Create(P(cu + hu, cv + hv - r), P(cu + hu - r, cv + hv), P(cu + hu - k, cv + hv - k)))
+            ca.Append(Line.CreateBound(P(cu + hu - r, cv + hv), P(cu - hu + r, cv + hv)))
+            ca.Append(Arc.Create(P(cu - hu + r, cv + hv), P(cu - hu, cv + hv - r), P(cu - hu + k, cv + hv - k)))
+            ca.Append(Line.CreateBound(P(cu - hu, cv + hv - r), P(cu - hu, cv - hv + r)))
+            ca.Append(Arc.Create(P(cu - hu, cv - hv + r), P(cu - hu + r, cv - hv), P(cu - hu + k, cv - hv + k)))
+            return ca
+        if t == 'u':
+            # canaleta: fondo semicircular de radio r centrado en c, paredes rectas hasta v = tope
+            cu, cv = lz['c']
+            r, top = lz['r'], lz['tope']
+            ca = CurveArray()
+            ca.Append(Arc.Create(P(cu - r, cv), P(cu + r, cv), P(cu, cv - r)))
+            ca.Append(Line.CreateBound(P(cu + r, cv), P(cu + r, top)))
+            ca.Append(Line.CreateBound(P(cu + r, top), P(cu - r, top)))
+            ca.Append(Line.CreateBound(P(cu - r, top), P(cu - r, cv)))
+            return ca
+        raise Exception(u'lazo desconocido: %s' % t)
 
     def _extrude(self, solid, profile, normal, origin, depth):
-        sp = self._sketch_plane(normal, origin)
-        return self.doc.FamilyCreate.NewExtrusion(solid, self._arr(profile), sp, depth)
+        caa = CurveArrArray()
+        caa.Append(profile)
+        return self.doc.FamilyCreate.NewExtrusion(solid, caa, self._sketch_plane(normal, origin), depth)
+
+    def _extrude_loops(self, solid, loops, axis, rango):
+        a0, a1 = rango
+        caa = CurveArrArray()
+        for lz in loops:
+            caa.Append(self._loop(lz, axis, a0))
+        ku, kv = SEC[axis]
+        sp = self._sketch_plane(vec(axis), pt({axis: a0, ku: 0.0, kv: 0.0}))
+        return self.doc.FamilyCreate.NewExtrusion(solid, caa, sp, (a1 - a0) * MM)
 
     def _finish(self, el, s, sub_default='cuerpo'):
         sub = self.subs.get(s.get('sub', sub_default))
@@ -360,21 +432,23 @@ class FamilyBuilder(object):
         if mparam and mparam in self.params:
             self.fm.AssociateElementParameterToFamilyParameter(
                 el.get_Parameter(BuiltInParameter.MATERIAL_ID_PARAM), self.params[mparam])
+        if s.get('nivel') == 'fino':
+            # piezas menores (pernos, manijas, sensores): ocultas en nivel de detalle Bajo
+            vis = FamilyElementVisibility(FamilyElementVisibilityType.Model)
+            vis.IsShownInCoarse = False
+            el.SetVisibility(vis)
 
     def make_solid(self, s, solid=True):
         f = s['forma']
         if f == 'caja':
             (x0, x1), (y0, y1), (z0, z1) = s['x'], s['y'], s['z']
-            c = xyz(((x0 + x1) / 2, (y0 + y1) / 2, z0))
-            prof = self._rect(c, XYZ.BasisX, XYZ.BasisY, (x1 - x0) / 2 * MM, (y1 - y0) / 2 * MM)
-            return self._extrude(solid, prof, XYZ.BasisZ, c, (z1 - z0) * MM)
+            lz = {'t': 'rect', 'c': ((x0 + x1) / 2.0, (y0 + y1) / 2.0), 'd': (x1 - x0, y1 - y0)}
+            return self._extrude_loops(solid, [lz], 'Z', (z0, z1))
         if f == 'cilindro':
-            ax = s['eje']
-            u, v = SEC[ax]
-            p = {u: s['centro'][0], v: s['centro'][1], ax: s['rango'][0]}
-            c = pt(p)
-            prof = self._circle(c, vec(u), vec(v), s['r'] * MM)
-            return self._extrude(solid, prof, vec(ax), c, (s['rango'][1] - s['rango'][0]) * MM)
+            lz = {'t': 'circ', 'c': s['centro'], 'r': s['r']}
+            return self._extrude_loops(solid, [lz], s['eje'], s['rango'])
+        if f == 'ext':
+            return self._extrude_loops(solid, s['lazos'], s['eje'], s['rango'])
         if f == 'transicion':
             z0, z1 = s['z']
             bx, by, bdx, bdy = s['base']
@@ -449,37 +523,84 @@ class FamilyBuilder(object):
             t.RollBack()
             raise Exception(u'build_nozzles: %s' % ex)
 
+    def _nozzle_layer(self, b, loops, start_param, end_param, start_mm, end_mm, style):
+        """Extrusion a lo largo del eje de la boquilla, con inicio/fin ligados a parametros de tipo."""
+        n = vec(b['eje'])
+        ax = b['eje'][-1]
+        sgn = -1.0 if b['eje'].startswith('-') else 1.0
+        ku, kv = SEC[ax]
+        base = dict(zip(('X', 'Y', 'Z'), b['base']))
+        caa = CurveArrArray()
+        for lz in loops:
+            caa.Append(self._loop(lz, ax, base[ax]))
+        c = xyz(b['base'])
+        sp = self._sketch_plane(n, c)
+        el = self.doc.FamilyCreate.NewExtrusion(True, caa, sp, end_mm * MM)
+        el.get_Parameter(BuiltInParameter.EXTRUSION_START_PARAM).Set(start_mm * MM)
+        self._finish(el, style)
+        if start_param:
+            self._assoc(el, BuiltInParameter.EXTRUSION_START_PARAM, b['id'] + '_' + start_param)
+        if end_param:
+            self._assoc(el, BuiltInParameter.EXTRUSION_END_PARAM, b['id'] + '_' + end_param)
+        return el
+
     def _nozzle(self, b):
         p = b['id']
         n = vec(b['eje'])
         ax = b['eje'][-1]
-        u, v = vec(SEC[ax][0]), vec(SEC[ax][1])
-        c = xyz(b['base'])
-        L = b['proyeccion'] * MM
-        e = b['e_brida'] * MM
+        ku, kv = SEC[ax]
+        base = dict(zip(('X', 'Y', 'Z'), b['base']))
+        cu, cv = base[ku], base[kv]
         circ = b['seccion'] == 'circular'
+        L = b['proyeccion']
+        e = b['e_brida']
+        rf = b.get('rf') or {}
+        cuello = b.get('cuello') or {}
+        pr = b.get('pernos') or {}
+        rf_h = rf.get('h', 0.0)
+        f0 = L - rf_h - e                      # inicio de la brida
+        cl = cuello.get('l', 0.0)
+
         if circ:
-            body = self._circle(c, u, v, b['d_tubo'] / 2 * MM)
-            flange = self._circle(c, u, v, b['d_brida'] / 2 * MM)
+            hole = {'t': 'circ', 'c': (cu, cv), 'r': b['d_interior'] / 2.0}
+            body = [{'t': 'circ', 'c': (cu, cv), 'r': b['d_tubo'] / 2.0}, hole]
+            fl = [{'t': 'circ', 'c': (cu, cv), 'r': b['d_brida'] / 2.0}, hole]
         else:
-            body = self._rect(c, u, v, b['cuerpo'][0] / 2 * MM, b['cuerpo'][1] / 2 * MM)
-            flange = self._rect(c, u, v, b['brida'][0] / 2 * MM, b['brida'][1] / 2 * MM)
-        conn_sub = {'sub': 'conexiones', 'mat': 'conexiones'}
+            hole = {'t': 'rect', 'c': (cu, cv), 'd': b['abertura']}
+            body = [{'t': 'rect', 'c': (cu, cv), 'd': b['cuerpo']}, hole]
+            fl = [{'t': 'rect', 'c': (cu, cv), 'd': b['brida']}, hole]
+        holes = [{'t': 'circ', 'c': q, 'r': pr['d_agujero'] / 2.0} for q in pr.get('pos', [])]
+        cuerpo = {'sub': 'cuerpo', 'mat': 'cuerpo'}
+        conn = {'sub': 'conexiones', 'mat': 'conexiones'}
+        perno = {'sub': 'conexiones', 'mat': 'pernos', 'nivel': 'fino'}
 
-        tube = self._extrude(True, body, n, c, L)
-        self._finish(tube, {'sub': 'cuerpo', 'mat': 'cuerpo'})
-        self._assoc(tube, BuiltInParameter.EXTRUSION_END_PARAM, p + '_Proyeccion')
-
-        fl = self._extrude(True, flange, n, c, L)
-        fl.get_Parameter(BuiltInParameter.EXTRUSION_START_PARAM).Set(L - e)
-        self._finish(fl, conn_sub)
-        self._assoc(fl, BuiltInParameter.EXTRUSION_END_PARAM, p + '_Proyeccion')
-        self._assoc(fl, BuiltInParameter.EXTRUSION_START_PARAM, p + '_Brida_Inicio')
-        self.elems[p + '_brida'] = fl
-        self.elems[p + '_tubo'] = tube
+        # tubo / ducto hueco desde la base hasta el cuello o la brida
+        tube_end = 'Cuello_Inicio' if cl > 0 else 'Brida_Inicio'
+        self.elems[p + '_tubo'] = self._nozzle_layer(b, body, None, tube_end, 0.0, f0 - cl, cuerpo)
+        if cl > 0:
+            neck = [{'t': 'circ', 'c': (cu, cv), 'r': cuello['d'] / 2.0}, hole]
+            self.elems[p + '_cuello'] = self._nozzle_layer(b, neck, 'Cuello_Inicio', 'Brida_Inicio',
+                                                           f0 - cl, f0, conn)
+        # brida con agujeros de pernos
+        flange_end = 'RF_Inicio' if rf_h > 0 else 'Proyeccion'
+        fl_el = self._nozzle_layer(b, fl + holes, 'Brida_Inicio', flange_end, f0, L - rf_h, conn)
+        self.elems[p + '_brida'] = fl_el
+        face_el = fl_el
+        if rf_h > 0:
+            rfl = [{'t': 'circ', 'c': (cu, cv), 'r': rf['d'] / 2.0}, hole]
+            face_el = self._nozzle_layer(b, rfl, 'RF_Inicio', 'Proyeccion', L - rf_h, L, conn)
+            self.elems[p + '_rf'] = face_el
+        # esparragos + tuercas del lado del equipo
+        if pr.get('pos'):
+            studs = [{'t': 'circ', 'c': q, 'r': pr['d'] / 2.0} for q in pr['pos']]
+            nuts = [{'t': 'hex', 'c': q, 's': pr['s']} for q in pr['pos']]
+            self.elems[p + '_esparragos'] = self._nozzle_layer(
+                b, studs, 'Tuerca_Inicio', 'Perno_Fin', f0 - pr['h'], L + pr['sale'], perno)
+            self.elems[p + '_tuercas'] = self._nozzle_layer(
+                b, nuts, 'Tuerca_Inicio', 'Brida_Inicio', f0 - pr['h'], f0, perno)
         self.doc.Regenerate()
 
-        face = self._face(fl, n, c.Add(n.Multiply(L)))
+        face = self._face(face_el, n, xyz(b['base']).Add(n.Multiply(L * MM)))
         if face is None:
             raise Exception(u'no se encontro la cara de la brida')
         if b['tipo'] == 'tuberia':
@@ -501,7 +622,7 @@ class FamilyBuilder(object):
             self._flow(ce, BuiltInParameter.RBS_DUCT_FLOW_DIRECTION_PARAM, b.get('flujo'))
         self._describe(ce, b.get('descripcion'))
         self.elems[p] = ce
-        self.log.ok(u'Conector %s (%s) creado' % (p, b['nombre']))
+        self.log.ok(u'Conector %s (%s): brida + %d pernos' % (p, b['nombre'], len(pr.get('pos', []))))
 
     def _flow(self, ce, bip, flujo):
         if not flujo:
@@ -599,11 +720,18 @@ class FamilyBuilder(object):
                     if axis == 'Z':
                         if not elev:
                             raise Exception(u'sin vista de alzado en la plantilla')
-                        view = elev[0]
-                        vd = view.RightDirection
                         o = XYZ(0, 0, value * MM)
-                        rp = self.doc.FamilyCreate.NewReferencePlane(o.Subtract(vd.Multiply(big)), o.Add(vd.Multiply(big)),
-                                                                     view.ViewDirection, view)
+                        rp = None
+                        for view in elev:
+                            try:   # plano horizontal = linea en X + tercer punto en Y
+                                rp = self.doc.FamilyCreate.NewReferencePlane2(
+                                    o.Subtract(XYZ.BasisX.Multiply(big)), o.Add(XYZ.BasisX.Multiply(big)),
+                                    o.Add(XYZ.BasisY.Multiply(big)), view)
+                                break
+                            except Exception:
+                                rp = None
+                        if rp is None:
+                            raise Exception(u'NewReferencePlane2 fallo en todas las vistas de alzado')
                     else:
                         if not plan:
                             raise Exception(u'sin vista de planta en la plantilla')

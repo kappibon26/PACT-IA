@@ -5,10 +5,10 @@ Vista previa / control de calidad de un spec de familia (fuera de Revit).
   python herramientas/preview_spec.py dynamo/specs/spec_PEL01_CPM7730.py salida.png
   python herramientas/preview_spec.py dynamo/specs/spec_PEL01_CPM7730.py salida.png --dxf PLANO.dxf \
          --lateral 17592.2 274.4 --frontal 14337.3 274.4
+  python herramientas/preview_spec.py SPEC salida.png --zoom X0 X1 Y0 Y1 Z0 Z1 --vista 25 -60
 
-Dibuja isometrica + alzado lateral (X-Z) + alzado frontal (Y-Z).  Con --dxf superpone el spec
-sobre el plano del proveedor (requiere ezdxf) para verificar cotas.
-Los parametros --lateral / --frontal son el origen de la familia en coordenadas del CAD:
+Dibuja isometrica + alzado lateral (X-Z) + alzado frontal (Y-Z).  Con --dxf superpone el spec sobre el
+plano del proveedor (requiere ezdxf).  --lateral / --frontal = origen de la familia en coordenadas CAD:
   lateral: x_cad = X + ox ; y_cad = Z + oz        frontal: x_cad = ox - Y ; y_cad = Z + oz
 """
 import argparse
@@ -20,8 +20,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-COL = {'cuerpo': '#9aa0a6', 'motores': '#4e5e70', 'estructura': '#464646',
-       'conexiones': '#E76A1F', 'zonas': '#E76A1F'}
+COL = {'cuerpo': '#dedfdb', 'motores': '#262628', 'reductores': '#c4c7c9', 'estructura': '#1e1e1e',
+       'conexiones': '#b0b3b6', 'pernos': '#8c8e91', 'zonas': '#E76A1F'}
 AX = {'X': 0, 'Y': 1, 'Z': 2}
 SEC = {'X': ('Y', 'Z'), 'Y': ('X', 'Z'), 'Z': ('X', 'Y')}
 
@@ -33,83 +33,124 @@ def load_spec(path):
     return m.SPEC
 
 
-def boxes(spec):
-    """Devuelve una lista (bbox((x0,x1),(y0,y1),(z0,z1)), color, forma, datos) aproximando todo a cajas/cilindros."""
+# ------------------------------------------------------------------ lazos -> poligonos 2D
+def loop_pts(lz, n=28):
+    t = lz['t']
+    if t == 'rect':
+        (cu, cv), (du, dv) = lz['c'], lz['d']
+        return [(cu - du / 2, cv - dv / 2), (cu + du / 2, cv - dv / 2), (cu + du / 2, cv + dv / 2), (cu - du / 2, cv + dv / 2)]
+    if t == 'rrect':
+        (cu, cv), (du, dv), r = lz['c'], lz['d'], lz['r']
+        hu, hv = du / 2, dv / 2
+        pts = []
+        for (sx, sy, a0) in ((1, -1, -90), (1, 1, 0), (-1, 1, 90), (-1, -1, 180)):
+            ox, oy = cu + sx * (hu - r), cv + sy * (hv - r)
+            for k in range(5):
+                a = math.radians(a0 + 90 * k / 4)
+                pts.append((ox + r * math.cos(a), oy + r * math.sin(a)))
+        return pts
+    if t == 'circ':
+        (cu, cv), r = lz['c'], lz['r']
+        return [(cu + r * math.cos(2 * math.pi * i / n), cv + r * math.sin(2 * math.pi * i / n)) for i in range(n)]
+    if t == 'hex':
+        (cu, cv), R = lz['c'], lz['s'] / math.sqrt(3)
+        return [(cu + R * math.cos(math.pi / 3 * i), cv + R * math.sin(math.pi / 3 * i)) for i in range(6)]
+    if t == 'poly':
+        return list(lz['pts'])
+    if t == 'u':
+        (cu, cv), r, top = lz['c'], lz['r'], lz['tope']
+        pts = [(cu + r * math.cos(math.pi + math.pi * i / 12), cv + r * math.sin(math.pi + math.pi * i / 12))
+               for i in range(13)]
+        return pts + [(cu + r, top), (cu - r, top)]
+    raise ValueError(t)
+
+
+def _bb2(p):
+    us, vs = [a for a, _ in p], [b for _, b in p]
+    return min(us), max(us), min(vs), max(vs)
+
+
+def outer_loops(loops):
+    """Descarta lazos contenidos en otro (huecos)."""
+    polys = [loop_pts(l) for l in loops]
+    bbs = [_bb2(p) for p in polys]
     out = []
-    for s in spec['solidos'] + spec.get('vacios', []):
-        col = COL.get(s.get('sub'), '#ffffff') if 'corta' not in s else '#ff0000'
-        if s['forma'] == 'caja':
-            out.append(([s['x'], s['y'], s['z']], col, 'caja', s))
-        elif s['forma'] == 'cilindro':
-            a = AX[s['eje']]
-            u, v = SEC[s['eje']]
-            bb = [None] * 3
-            bb[a] = s['rango']
-            bb[AX[u]] = (s['centro'][0] - s['r'], s['centro'][0] + s['r'])
-            bb[AX[v]] = (s['centro'][1] - s['r'], s['centro'][1] + s['r'])
-            out.append((bb, col, 'cil', s))
-        elif s['forma'] == 'transicion':
-            for key, z in (('base', s['z'][0]), ('tope', s['z'][1])):
-                cx, cy, dx, dy = s[key]
-                out.append(([(cx - dx / 2, cx + dx / 2), (cy - dy / 2, cy + dy / 2), (z - 1, z + 1)], col, 'caja', s))
-    for b in spec.get('boquillas', []):
-        sgn = -1 if b['eje'][0] == '-' else 1
-        e = b['eje'][1]
-        a = AX[e]
-        u, v = SEC[e]
-        p0 = b['base'][a]
-        p1 = p0 + sgn * b['proyeccion']
-        if b['seccion'] == 'circular':
-            hu = hv = b['d_brida'] / 2
-        else:
-            hu, hv = b['brida'][0] / 2, b['brida'][1] / 2
-        bb = [None] * 3
-        bb[a] = (min(p0, p1), max(p0, p1))
-        bb[AX[u]] = (b['base'][AX[u]] - hu, b['base'][AX[u]] + hu)
-        bb[AX[v]] = (b['base'][AX[v]] - hv, b['base'][AX[v]] + hv)
-        out.append((bb, COL['conexiones'], 'cil' if b['seccion'] == 'circular' else 'caja', b))
-    for z in spec.get('zonas', []):
-        sgn = -1 if z['normal'][0] == '-' else 1
-        e = z['normal'][1]
-        a = AX[e]
-        u, v = SEC[e]
-        bb = [None] * 3
-        p1 = z['plano'] + sgn * z['largo']
-        bb[a] = (min(z['plano'], p1), max(z['plano'], p1))
-        bb[AX[u]] = z['u']
-        bb[AX[v]] = z['v']
-        out.append((bb, 'zona', 'caja', z))
+    for i, p in enumerate(polys):
+        a = bbs[i]
+        inside = any(j != i and b[0] <= a[0] and a[1] <= b[1] and b[2] <= a[2] and a[3] <= b[3] and
+                     (b[1] - b[0]) * (b[3] - b[2]) > (a[1] - a[0]) * (a[3] - a[2]) for j, b in enumerate(bbs))
+        if not inside:
+            out.append(p)
     return out
 
 
-def cube_faces(bb):
-    (x0, x1), (y0, y1), (z0, z1) = bb
-    p = [(x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0),
-         (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)]
-    idx = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
-    return [[p[i] for i in f] for f in idx]
+# ------------------------------------------------------------------ spec -> prismas
+def prisms(spec):
+    """(eje, a0, a1, poligono(u,v), color, es_zona)"""
+    out = []
+
+    def add(axis, a0, a1, loops, col, zona=False):
+        for p in outer_loops(loops):
+            out.append((axis, min(a0, a1), max(a0, a1), p, col, zona))
+    for s in spec['solidos'] + spec.get('vacios', []):
+        col = '#ff0000' if 'corta' in s else COL.get(s.get('mat'), COL.get(s.get('sub'), '#ffffff'))
+        f = s['forma']
+        if f == 'caja':
+            (x0, x1), (y0, y1), (z0, z1) = s['x'], s['y'], s['z']
+            add('Z', z0, z1, [{'t': 'rect', 'c': ((x0 + x1) / 2, (y0 + y1) / 2), 'd': (x1 - x0, y1 - y0)}], col)
+        elif f == 'cilindro':
+            add(s['eje'], s['rango'][0], s['rango'][1], [{'t': 'circ', 'c': s['centro'], 'r': s['r']}], col)
+        elif f == 'ext':
+            add(s['eje'], s['rango'][0], s['rango'][1], s['lazos'], col)
+        elif f == 'transicion':
+            for key, z in (('base', s['z'][0]), ('tope', s['z'][1])):
+                cx, cy, dx, dy = s[key]
+                add('Z', z - 1, z + 1, [{'t': 'rect', 'c': (cx, cy), 'd': (dx, dy)}], col)
+            (bx, by, _, _), (tx, ty, tdx, tdy) = s['base'], s['tope']
+            add('Z', s['z'][0], s['z'][1], [{'t': 'rect', 'c': ((bx + tx) / 2, (by + ty) / 2), 'd': (tdx, tdy)}], col)
+    for b in spec.get('boquillas', []):
+        sgn = -1 if b['eje'][0] == '-' else 1
+        e = b['eje'][1]
+        ku, kv = SEC[e]
+        base = dict(zip('XYZ', b['base']))
+        a = base[e]
+        L, ef = b['proyeccion'], b['e_brida']
+        rf = (b.get('rf') or {}).get('h', 0.0)
+        f0 = L - rf - ef
+        c = (base[ku], base[kv])
+        if b['seccion'] == 'circular':
+            add(e, a, a + sgn * f0, [{'t': 'circ', 'c': c, 'r': b['d_tubo'] / 2}], COL['cuerpo'])
+            add(e, a + sgn * f0, a + sgn * (L - rf), [{'t': 'circ', 'c': c, 'r': b['d_brida'] / 2}], COL['conexiones'])
+        else:
+            add(e, a, a + sgn * f0, [{'t': 'rect', 'c': c, 'd': b['cuerpo']}], COL['cuerpo'])
+            add(e, a + sgn * f0, a + sgn * L, [{'t': 'rect', 'c': c, 'd': b['brida']}], COL['conexiones'])
+        pr = b.get('pernos') or {}
+        if pr.get('pos'):
+            add(e, a + sgn * (f0 - pr['h']), a + sgn * (L + pr['sale']),
+                [{'t': 'circ', 'c': q, 'r': pr['d'] / 2} for q in pr['pos']], COL['pernos'])
+            add(e, a + sgn * (f0 - pr['h']), a + sgn * f0, [{'t': 'hex', 'c': q, 's': pr['s']} for q in pr['pos']],
+                COL['pernos'])
+    for z in spec.get('zonas', []):
+        sgn = -1 if z['normal'][0] == '-' else 1
+        e = z['normal'][1]
+        add(e, z['plano'], z['plano'] + sgn * z['largo'],
+            [{'t': 'rect', 'c': ((z['u'][0] + z['u'][1]) / 2, (z['v'][0] + z['v'][1]) / 2),
+              'd': (z['u'][1] - z['u'][0], z['v'][1] - z['v'][0])}], COL['zonas'], True)
+    return out
 
 
-def cyl_faces(s, n=24):
-    a = AX[s['eje']]
-    u, v = AX[SEC[s['eje']][0]], AX[SEC[s['eje']][1]]
-    faces = []
-    r0, r1 = s['rango']
-    ring = []
-    for i in range(n):
-        t = 2 * math.pi * i / n
-        ring.append((s['centro'][0] + s['r'] * math.cos(t), s['centro'][1] + s['r'] * math.sin(t)))
+def to3d(axis, a, p):
+    ku, kv = SEC[axis]
+    q = [0.0, 0.0, 0.0]
+    q[AX[axis]], q[AX[ku]], q[AX[kv]] = a, p[0], p[1]
+    return tuple(q)
 
-    def P(cu, cv, ca):
-        q = [0, 0, 0]
-        q[a], q[u], q[v] = ca, cu, cv
-        return tuple(q)
-    for i in range(n):
-        (u0, v0), (u1, v1) = ring[i], ring[(i + 1) % n]
-        faces.append([P(u0, v0, r0), P(u1, v1, r0), P(u1, v1, r1), P(u0, v0, r1)])
-    faces.append([P(cu, cv, r0) for cu, cv in ring])
-    faces.append([P(cu, cv, r1) for cu, cv in ring])
-    return faces
+
+def prism_faces(axis, a0, a1, poly):
+    b = [to3d(axis, a0, p) for p in poly]
+    t = [to3d(axis, a1, p) for p in poly]
+    n = len(poly)
+    return [b, t] + [[b[i], b[(i + 1) % n], t[(i + 1) % n], t[i]] for i in range(n)]
 
 
 def main():
@@ -119,49 +160,72 @@ def main():
     ap.add_argument('--dxf')
     ap.add_argument('--lateral', nargs=2, type=float, default=(0.0, 0.0))
     ap.add_argument('--frontal', nargs=2, type=float, default=(0.0, 0.0))
+    ap.add_argument('--zoom', nargs=6, type=float)
+    ap.add_argument('--vista', nargs=2, type=float, default=(22.0, -58.0))
+    ap.add_argument('--solo3d', action='store_true')
     a = ap.parse_args()
     spec = load_spec(a.spec)
-    items = boxes(spec)
+    items = prisms(spec)
 
-    fig = plt.figure(figsize=(22, 13))
-    ax3 = fig.add_subplot(2, 2, (1, 3), projection='3d')
-    for bb, col, kind, s in items:
-        if col == 'zona':
-            ax3.add_collection3d(Poly3DCollection(cube_faces(bb), facecolor=COL['zonas'], alpha=0.08,
-                                                  edgecolor=COL['zonas'], linewidth=0.3))
+    fig = plt.figure(figsize=(22, 13) if not a.solo3d else (18, 13))
+    ax3 = fig.add_subplot(1, 1, 1, projection='3d') if a.solo3d else fig.add_subplot(2, 2, (1, 3), projection='3d')
+    lim = a.zoom or (-1400, 4500, -1500, 1500, 0, 3500)
+    show_zones = a.zoom is None
+    for axis, a0, a1, poly, col, zona in items:
+        if zona and not show_zones:
             continue
-        f = cyl_faces(s) if (kind == 'cil' and 'centro' in s) else cube_faces(bb)
-        ax3.add_collection3d(Poly3DCollection(f, facecolor=col, edgecolor='k', linewidth=0.15, alpha=0.95))
-    ax3.set_xlim(-6000, 4500); ax3.set_ylim(-3000, 3000); ax3.set_zlim(0, 3600)
-    ax3.set_box_aspect((10500, 6000, 3600))
-    ax3.view_init(elev=22, azim=-58)
-    ax3.set_xlabel('X'); ax3.set_ylabel('Y'); ax3.set_zlabel('Z')
+        f = prism_faces(axis, a0, a1, poly)
+        if zona:
+            ax3.add_collection3d(Poly3DCollection(f, facecolor=col, alpha=0.06, edgecolor=col, linewidth=0.3))
+        else:
+            ax3.add_collection3d(Poly3DCollection(f, facecolor=col, edgecolor='#555555', linewidth=0.08, alpha=1.0))
+    ax3.set_xlim(lim[0], lim[1]); ax3.set_ylim(lim[2], lim[3]); ax3.set_zlim(lim[4], lim[5])
+    ax3.set_box_aspect((lim[1] - lim[0], lim[3] - lim[2], lim[5] - lim[4]))
+    ax3.view_init(elev=a.vista[0], azim=a.vista[1])
+    ax3.set_axis_off()
     ax3.set_title(spec['familia']['nombre_archivo'] + '  -  ' + spec['familia']['tipo'])
 
-    axL = fig.add_subplot(2, 2, 2)
-    axF = fig.add_subplot(2, 2, 4)
-    if a.dxf:
-        import ezdxf
-        from ezdxf.addons.drawing import RenderContext, Frontend
-        from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
-        doc = ezdxf.readfile(a.dxf)
-        for axx in (axL, axF):
-            Frontend(RenderContext(doc), MatplotlibBackend(axx)).draw_layout(doc.modelspace())
-    oxL, ozL = a.lateral
-    oxF, ozF = a.frontal
-    for bb, col, kind, s in items:
-        c = COL['zonas'] if col == 'zona' else ('#00e5ff' if col != '#ff0000' else '#ff0000')
-        ls = ':' if col == 'zona' else '-'
-        (x0, x1), (y0, y1), (z0, z1) = bb
-        axL.add_patch(plt.Rectangle((x0 + oxL, z0 + ozL), x1 - x0, z1 - z0, fill=False, ec=c, lw=0.8, ls=ls))
-        axF.add_patch(plt.Rectangle((oxF - y1, z0 + ozF), y1 - y0, z1 - z0, fill=False, ec=c, lw=0.8, ls=ls))
-    axL.set_xlim(oxL - 1500, oxL + 4600); axL.set_ylim(ozL - 100, ozL + 3600)
-    axF.set_xlim(oxF - 1300, oxF + 1300); axF.set_ylim(ozF - 100, ozF + 3600)
-    for axx, t in ((axL, 'Alzado lateral X-Z (cian = spec)'), (axF, 'Alzado frontal Y-Z (cian = spec)')):
-        axx.set_aspect('equal'); axx.set_title(t)
+    if not a.solo3d:
+        axL = fig.add_subplot(2, 2, 2)
+        axF = fig.add_subplot(2, 2, 4)
+        if a.dxf:
+            import ezdxf
+            from ezdxf.addons.drawing import RenderContext, Frontend
+            from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
+            doc = ezdxf.readfile(a.dxf)
+            for axx in (axL, axF):
+                Frontend(RenderContext(doc), MatplotlibBackend(axx)).draw_layout(doc.modelspace())
+        oxL, ozL = a.lateral
+        oxF, ozF = a.frontal
+        line = '#00e5ff' if a.dxf else '#333333'
+        for axis, a0, a1, poly, col, zona in items:
+            pts = [v for f in prism_faces(axis, a0, a1, poly) for v in f]
+            c = COL['zonas'] if zona else ('#ff0000' if col == '#ff0000' else line)
+            ls = ':' if zona else '-'
+            lw = 0.5
+            if axis == 'Y':
+                xs = [p[0] + oxL for p in poly] + [poly[0][0] + oxL]
+                zs = [p[1] + ozL for p in poly] + [poly[0][1] + ozL]
+                axL.plot(xs, zs, color=c, lw=lw, ls=ls)
+            else:
+                x0, x1 = min(p[0] for p in pts), max(p[0] for p in pts)
+                z0, z1 = min(p[2] for p in pts), max(p[2] for p in pts)
+                axL.add_patch(plt.Rectangle((x0 + oxL, z0 + ozL), x1 - x0, z1 - z0, fill=False, ec=c, lw=lw, ls=ls))
+            if axis == 'X':
+                xs = [oxF - p[0] for p in poly] + [oxF - poly[0][0]]
+                zs = [p[1] + ozF for p in poly] + [poly[0][1] + ozF]
+                axF.plot(xs, zs, color=c, lw=lw, ls=ls)
+            else:
+                y0, y1 = min(p[1] for p in pts), max(p[1] for p in pts)
+                z0, z1 = min(p[2] for p in pts), max(p[2] for p in pts)
+                axF.add_patch(plt.Rectangle((oxF - y1, z0 + ozF), y1 - y0, z1 - z0, fill=False, ec=c, lw=lw, ls=ls))
+        axL.set_xlim(oxL - 1500, oxL + 4600); axL.set_ylim(ozL - 100, ozL + 3600)
+        axF.set_xlim(oxF - 1300, oxF + 1300); axF.set_ylim(ozF - 100, ozF + 3600)
+        for axx, t in ((axL, 'Alzado lateral X-Z'), (axF, 'Alzado frontal Y-Z (visto desde la puerta)')):
+            axx.set_aspect('equal'); axx.set_title(t)
     fig.tight_layout()
     fig.savefig(a.png, dpi=110)
-    print('ok ->', a.png, len(items), 'piezas')
+    print('ok ->', a.png, len(items), 'prismas')
 
 
 if __name__ == '__main__':
