@@ -59,3 +59,12 @@ else:
         log.err(u'Ejecucion detenida', ex)
     resumen = u'RESUMEN: %d errores, %d avisos' % (log.errores, log.avisos)
     OUT = [resumen, rfa] + log.lines
+    try:                               # copia del registro junto al .rfa
+        import io
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+        with io.open(os.path.join(out_dir, os.path.splitext(os.path.basename(spec_path))[0] + '_registro.txt'),
+                     'w', encoding='utf-8') as f:
+            f.write(u'\n'.join([u'%s' % x for x in OUT]))
+    except Exception:
+        pass
