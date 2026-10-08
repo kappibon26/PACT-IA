@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>ADLB · Automatiza tus familias de Revit</title>
+<style>
+  @page { size: A4; margin: 0; }
+  :root {
+    --carbon: #0E0E0E;
+    --naranja: #E76A1F;
+    --off: #F5F4F0;
+    --gris: #6B6B66;
+    --linea: #D9D7D0;
+    --suave: #ECEAE4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--off); }
+  body { font-family: 'Inter', sans-serif; color: var(--carbon); font-size: 9.6pt; line-height: 1.5;
+         -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .mono { font-family: 'DejaVu Sans Mono', monospace; }
+
+  .page { width: 210mm; height: 297mm; position: relative; overflow: hidden; page-break-after: always;
+          padding: 22mm 20mm 24mm 20mm; background: var(--off); }
+  .page:last-child { page-break-after: auto; }
+
+  /* encabezado / pie */
+  .top { position: absolute; top: 10mm; left: 20mm; right: 20mm; display: flex; justify-content: space-between;
+         font-size: 7.5pt; letter-spacing: .12em; text-transform: uppercase; color: var(--gris); }
+  .top b { color: var(--carbon); font-weight: 700; letter-spacing: .08em; }
+  .top b i { color: var(--naranja); font-style: normal; }
+  .foot { position: absolute; bottom: 10mm; left: 20mm; right: 20mm; display: flex; justify-content: space-between;
+          font-size: 7.5pt; color: var(--gris); border-top: 0.6pt solid var(--linea); padding-top: 3mm; }
+  .foot .n { font-family: 'DejaVu Sans Mono', monospace; color: var(--carbon); }
+
+  /* tipografia */
+  .kicker { font-size: 8pt; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--naranja); }
+  h1 { font-family: 'Inter Display', 'Inter', sans-serif; font-weight: 800; font-size: 30pt; line-height: 1.02;
+       letter-spacing: -.02em; margin: 3mm 0 4mm; }
+  h2 { font-family: 'Inter Display', 'Inter', sans-serif; font-weight: 700; font-size: 15pt; line-height: 1.15;
+       letter-spacing: -.01em; margin: 7mm 0 2.5mm; }
+  h3 { font-weight: 700; font-size: 10.5pt; margin: 4.5mm 0 1.5mm; }
+  p { margin: 0 0 2.6mm; }
+  .lead { font-size: 11.5pt; line-height: 1.45; color: #2a2a28; max-width: 150mm; }
+  .rule { width: 18mm; height: 1.6mm; background: var(--naranja); margin: 0 0 5mm; }
+  .muted { color: var(--gris); }
+  strong { font-weight: 700; }
+  .o { color: var(--naranja); }
+
+  /* portada */
+  .cover { background: var(--carbon); color: var(--off); padding: 0; }
+  .cover .in { position: absolute; inset: 0; padding: 22mm 20mm; display: flex; flex-direction: column; }
+  .brand { font-family: 'Inter Display', 'Inter', sans-serif; font-weight: 900; font-size: 26pt; letter-spacing: -.02em; }
+  .brand i { color: var(--naranja); font-style: normal; }
+  .cover .tag { margin-top: auto; }
+  .cover .kicker { color: var(--naranja); }
+  .cover h1 { font-size: 46pt; color: var(--off); margin: 5mm 0 6mm; }
+  .cover h1 span { color: var(--naranja); }
+  .cover .sub { font-size: 12.5pt; color: #BDBBB4; max-width: 140mm; line-height: 1.45; }
+  .cover .items { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; margin-top: 14mm;
+                  border-top: 0.6pt solid #3a3a38; padding-top: 6mm; }
+  .cover .items div { font-size: 9pt; color: #BDBBB4; }
+  .cover .items b { display: block; font-family: 'DejaVu Sans Mono', monospace; color: var(--naranja);
+                    font-size: 8pt; margin-bottom: 1.5mm; font-weight: 400; }
+  .cover .items strong { color: var(--off); display: block; font-size: 10.5pt; margin-bottom: 1mm; }
+  .cover .grid { position: absolute; right: -10mm; top: 30mm; width: 120mm; height: 120mm; opacity: .9; }
+  .cover .free { position: absolute; top: 22mm; right: 20mm; border: 0.8pt solid var(--naranja); color: var(--naranja);
+                 font-size: 7.5pt; letter-spacing: .16em; text-transform: uppercase; padding: 1.6mm 3mm; font-weight: 600; }
+
+  /* bloques */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+  .card { background: #FFFFFF; border: 0.6pt solid var(--linea); padding: 4.5mm 4.5mm 3.5mm; }
+  .card h3 { margin-top: 0; }
+  .card .num { font-family: 'DejaVu Sans Mono', monospace; color: var(--naranja); font-size: 8pt; margin-bottom: 1mm; }
+  .dark { background: var(--carbon); color: var(--off); border: none; }
+  .dark .muted { color: #A9A7A0; }
+  .tip { border-left: 1.6mm solid var(--naranja); background: #FFFFFF; padding: 3.5mm 4.5mm; margin: 4mm 0; }
+  .tip .kicker { margin-bottom: 1mm; display: block; }
+
+  ul.clean { list-style: none; }
+  ul.clean li { padding-left: 5mm; position: relative; margin-bottom: 1.6mm; }
+  ul.clean li::before { content: ''; position: absolute; left: 0; top: 2.1mm; width: 2.2mm; height: 0.8mm; background: var(--naranja); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 8.6pt; }
+  th { text-align: left; font-weight: 600; font-size: 7.5pt; letter-spacing: .08em; text-transform: uppercase;
+       color: var(--gris); border-bottom: 1pt solid var(--carbon); padding: 1.8mm 2mm; }
+  td { border-bottom: 0.6pt solid var(--linea); padding: 1.8mm 2mm; vertical-align: top; }
+  td.mono, td .mono { font-size: 8pt; }
+  .worksheet td { height: 8.5mm; background: #FFFFFF; }
+
+  pre { font-family: 'DejaVu Sans Mono', monospace; font-size: 7.6pt; line-height: 1.5; background: var(--carbon);
+        color: #E8E6E0; padding: 4mm 4.5mm; white-space: pre; overflow: hidden; }
+  pre .c { color: #8C8A84; } pre .k { color: var(--naranja); }
+
+  /* flujo de 4 pasos */
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 4mm 0 2mm; }
+  .flow div { border-top: 1.6mm solid var(--carbon); padding: 3mm 3mm 0 0; }
+  .flow div.on { border-top-color: var(--naranja); }
+  .flow b { font-family: 'DejaVu Sans Mono', monospace; font-weight: 400; color: var(--naranja); font-size: 8pt; }
+  .flow strong { display: block; font-size: 11pt; margin: .5mm 0 1mm; }
+  .flow span { font-size: 8.4pt; color: #3a3a38; }
+
+  /* checklist */
+  .ck { margin: 0 0 3.5mm; break-inside: avoid; }
+  .ck h3 { display: flex; align-items: baseline; gap: 2.5mm; border-bottom: 1pt solid var(--carbon);
+           padding-bottom: 1.4mm; margin: 0 0 1.6mm; }
+  .ck h3 .mono { color: var(--naranja); font-weight: 400; font-size: 8pt; }
+  .ck ul { list-style: none; }
+  .ck li { display: grid; grid-template-columns: 5mm 1fr; gap: 1.5mm; padding: 1.15mm 0;
+           border-bottom: 0.5pt solid var(--linea); font-size: 8.7pt; line-height: 1.38; }
+  .box { width: 3.4mm; height: 3.4mm; border: 0.9pt solid var(--carbon); margin-top: .6mm; background: #fff; }
+  .ck li em { font-style: normal; color: var(--gris); }
+
+  .score { display: inline-block; font-family: 'DejaVu Sans Mono', monospace; font-size: 7.8pt; padding: .2mm 1.6mm;
+           background: var(--carbon); color: var(--off); }
+  .score.o { background: var(--naranja); }
+
+  .nodegraph { width: 100%; margin: 3mm 0 1mm; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ PORTADA -->
+<section class="page cover">
+  <svg class="grid" viewBox="0 0 120 120" aria-hidden="true">
+    <defs>
+      <pattern id="g" width="10" height="10" patternUnits="userSpaceOnUse">
+        <path d="M10 0H0V10" fill="none" stroke="#2c2c2a" stroke-width=".35"/>
+      </pattern>
+    </defs>
+    <rect width="120" height="120" fill="url(#g)"/>
+    <!-- familia esquematica: caja + cilindro + conectores -->
+    <g fill="none" stroke="#F5F4F0" stroke-width=".7">
+      <path d="M30 70 L60 55 L90 70 L60 85 Z"/>
+      <path d="M30 70 L30 90 L60 105 L90 90 L90 70"/>
+      <path d="M60 85 L60 105"/>
+      <ellipse cx="60" cy="45" rx="16" ry="8"/>
+      <path d="M44 45 L44 62 M76 45 L76 62"/>
+    </g>
+    <g fill="#E76A1F">
+      <circle cx="90" cy="80" r="2.4"/><circle cx="30" cy="80" r="2.4"/><circle cx="60" cy="37" r="2.4"/>
+    </g>
+    <g stroke="#E76A1F" stroke-width=".6" stroke-dasharray="1.5 1.5">
+      <path d="M90 80 H112 M30 80 H8 M60 37 V12"/>
+    </g>
+  </svg>
+  <div class="free">Kit gratuito</div>
+  <div class="in">
+    <div class="brand">ADLB<i>.</i></div>
+    <div class="tag">
+      <div class="kicker">Lead Magnet Kit · BIM / Revit / Dynamo</div>
+      <h1>Automatiza<br>tus familias<br>de Revit<span>.</span></h1>
+      <p class="sub">Un método corto para dejar de repetir clics: detecta lo que se repite, conviértelo en datos
+        y deja que Dynamo haga el trabajo. Revisa todo antes de que llegue al proyecto.</p>
+      <div class="items">
+        <div><b>01</b><strong>Guía</strong>Cómo detectar las tareas repetitivas al crear familias.</div>
+        <div><b>02</b><strong>Plantilla Dynamo</strong>Crea y asigna parámetros desde una tabla CSV.</div>
+        <div><b>03</b><strong>Checklist</strong>Parámetros, geometría y funcionamiento antes de cargar.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ COMO USAR -->
+<section class="page">
+  <div class="top"><b>ADLB<i>.</i></b><span>Automatiza tus familias de Revit</span></div>
+
+  <div class="kicker">Antes de empezar</div>
+  <h1>Una familia bien hecha<br>no debería hacerse<br>dos veces.</h1>
+  <div class="rule"></div>
+  <p class="lead">Crear familias de equipos suele ser más copia y pega que diseño: los mismos parámetros, los
+    mismos materiales, los mismos datos de fabricante, conectores que hay que dimensionar uno por uno. Este kit
+    te ayuda a separar lo que <strong>sí</strong> requiere tu criterio de lo que puede hacer una máquina.</p>
+
+  <h2>El método en 4 pasos</h2>
+  <div class="flow">
+    <div class="on"><b>01</b><strong>Detectar</strong><span>Lista lo que repites y mide cuánto te cuesta.</span></div>
+    <div><b>02</b><strong>Estandarizar</strong><span>Un solo nombre, un solo tipo de dato, un solo grupo por parámetro.</span></div>
+    <div><b>03</b><strong>Automatizar</strong><span>Pasa el estándar a una tabla y deja que Dynamo la aplique.</span></div>
+    <div><b>04</b><strong>Verificar</strong><span>Revisa con checklist antes de cargar al proyecto.</span></div>
+  </div>
+
+  <h2>Qué incluye</h2>
+  <div class="grid3">
+    <div class="card"><div class="num">01 · PDF</div><h3>Guía de detección</h3>
+      <p class="muted">Señales de repetición, matriz para priorizar y hoja de trabajo para tu propio inventario.</p></div>
+    <div class="card"><div class="num">02 · .dyn + .csv</div><h3>Plantilla Dynamo</h3>
+      <p class="muted">Gráfico listo: lee una tabla, crea los parámetros que falten y asigna valores en todos los tipos.</p></div>
+    <div class="card"><div class="num">03 · PDF</div><h3>Checklist de control</h3>
+      <p class="muted">41 puntos en 6 bloques para revisar la familia antes de entregarla.</p></div>
+  </div>
+
+  <div class="tip"><span class="kicker">Requisitos</span>
+    Revit 2022 o superior con Dynamo 2.x (motor CPython3). No necesitas paquetes externos: la plantilla usa solo
+    nodos nativos y un nodo Python.</div>
+
+  <div class="foot"><span>ADLB · Kit gratuito</span><span class="n">02</span></div>
+</section>
+
+<!-- ============================================================ GUIA 1 -->
+<section class="page">
+  <div class="top"><b>ADLB<i>.</i></b><span>01 · Guía de detección</span></div>
+
+  <div class="kicker">Parte 01</div>
+  <h1>Detecta lo que<br>se repite.</h1>
+  <div class="rule"></div>
+  <p class="lead">Si haces lo mismo por tercera vez, ya es un proceso. A la tercera vez, escríbelo; a la cuarta,
+    automatízalo.</p>
+
+  <h2>8 señales de que una tarea debe automatizarse</h2>
+  <div class="grid2">
+    <ul class="clean">
+      <li><strong>Copias parámetros a mano</strong> de una familia a otra, o los vuelves a crear desde cero.</li>
+      <li><strong>El mismo dato tiene tres nombres:</strong> <span class="mono">Largo</span>, <span class="mono">Longitud</span>, <span class="mono">L</span>. Las tablas no cuadran.</li>
+      <li><strong>Llenas datos de fabricante y de información</strong> (modelo, peso, fuente, nivel de desarrollo) tipo por tipo.</li>
+      <li><strong>Creas materiales y subcategorías</strong> uno a uno, y nunca quedan iguales entre familias.</li>
+    </ul>
+    <ul class="clean">
+      <li><strong>Colocas conectores</strong> y luego ajustas a mano su tamaño, sistema y dirección de flujo.</li>
+      <li><strong>Tecleas los tipos de un catálogo</strong> que ya existe en una tabla del fabricante.</li>
+      <li><strong>Revisas “a ojo”</strong> antes de cargar, y los errores aparecen ya en el proyecto.</li>
+      <li><strong>Rehaces la familia completa</strong> cuando el proveedor cambia un modelo o una medida.</li>
+    </ul>
+  </div>
+
+  <h2>Separa datos de lógica</h2>
+  <p>El cambio de mentalidad más útil: una familia es <strong>datos</strong> (medidas, nombres, valores, conexiones)
+    más <strong>lógica</strong> (cómo se construye). Los datos cambian en cada equipo; la lógica casi nunca.</p>
+  <div class="grid2">
+    <div class="card"><div class="num">DATOS · un archivo por familia</div>
+      <ul class="clean">
+        <li>Tabla de parámetros: nombre, tipo, grupo, valor.</li>
+        <li>Medidas tomadas de la ficha técnica o del plano del proveedor.</li>
+        <li>Conexiones: servicio, tamaño, posición, sentido de flujo.</li>
+      </ul></div>
+    <div class="card dark"><div class="num">LÓGICA · una herramienta para todas</div>
+      <ul class="clean">
+        <li>Crear lo que falta, actualizar lo que existe.</li>
+        <li>Convertir unidades y validar valores.</li>
+        <li>Dejar un registro de qué se hizo y qué falló.</li>
+      </ul></div>
+  </div>
+  <p class="muted" style="margin-top:3mm">Cuando cambie el modelo del proveedor, editas la tabla y vuelves a correr la herramienta.
+    No rehaces la familia.</p>
+
+  <div class="foot"><span>ADLB · Kit gratuito</span><span class="n">03</span></div>
+</section>
+
+<!-- ============================================================ GUIA 2 -->
+<section class="page">
+  <div class="top"><b>ADLB<i>.</i></b><span>01 · Guía de detección</span></div>
+
+  <h2 style="margin-top:0">Prioriza: frecuencia × tiempo × riesgo</h2>
+  <p>Califica cada tarea de 1 a 3 en los tres criterios y súmalos. <span class="score o">7–9</span> automatiza ya,
+    <span class="score">5–6</span> estandariza primero, <span class="score" style="background:#9a9892">3–4</span> déjala manual.</p>
+  <table>
+    <tr><th style="width:24%">Criterio</th><th>1 · bajo</th><th>2 · medio</th><th>3 · alto</th></tr>
+    <tr><td><strong>Frecuencia</strong></td><td>Una vez por proyecto</td><td>En cada familia</td><td>En cada tipo o cada actualización</td></tr>
+    <tr><td><strong>Tiempo</strong></td><td>&lt; 5 min</td><td>5–30 min</td><td>&gt; 30 min</td></tr>
+    <tr><td><strong>Riesgo de error</strong></td><td>Se nota enseguida</td><td>Se nota al etiquetar o tabular</td><td>Se nota en obra o en coordinación</td></tr>
+  </table>
+
+  <h3 style="margin-top:5mm">Ejemplos típicos</h3>
+  <table>
+    <tr><th>Tarea</th><th>F</th><th>T</th><th>R</th><th>Total</th><th>Decisión</th></tr>
+    <tr><td>Crear el set de parámetros de información (LOI) en cada familia</td><td>3</td><td>2</td><td>3</td><td><span class="score o">8</span></td><td>Plantilla Dynamo + CSV</td></tr>
+    <tr><td>Asignar fabricante, modelo y peso a cada tipo</td><td>3</td><td>2</td><td>2</td><td><span class="score o">7</span></td><td>Columna Valor del CSV</td></tr>
+    <tr><td>Dimensionar conectores y ligarlos a parámetros</td><td>2</td><td>2</td><td>3</td><td><span class="score o">7</span></td><td>Script por familia</td></tr>
+    <tr><td>Crear materiales y subcategorías estándar</td><td>2</td><td>2</td><td>2</td><td><span class="score">6</span></td><td>Plantilla de familia</td></tr>
+    <tr><td>Modelar la geometría singular de un equipo</td><td>1</td><td>3</td><td>2</td><td><span class="score">6</span></td><td>Manual, con checklist</td></tr>
+  </table>
+
+  <h2>Errores comunes al automatizar</h2>
+  <div class="grid2">
+    <ul class="clean">
+      <li><strong>Ejecutar en modo Automático.</strong> Usa modo Manual y un interruptor <span class="mono">EJECUTAR</span>: cada cambio de ruta no debe tocar la familia.</li>
+      <li><strong>No simular.</strong> Corre primero en modo revisión y lee el registro antes de aplicar.</li>
+      <li><strong>Cambiar de ventana en Revit.</strong> Dynamo trabaja sobre el documento desde el que se abrió; si cambias de archivo, se bloquea.</li>
+      <li><strong>Olvidar las unidades.</strong> Revit guarda longitudes en pies internamente: convierte siempre desde mm.</li>
+    </ul>
+    <ul class="clean">
+      <li><strong>Mover archivos sueltos.</strong> Mantén juntas la plantilla, las tablas y las librerías, con una estructura de carpetas fija.</li>
+      <li><strong>Sin registro.</strong> Si el script no dice qué creó y qué falló, no sabrás qué revisar.</li>
+      <li><strong>Editar el archivo de compartidos a mano.</strong> Un GUID duplicado rompe etiquetas y tablas en todo el proyecto.</li>
+      <li><strong>Parametrizar todo.</strong> Un equipo de catálogo no cambia de tamaño: parametriza lo que cambia (conexiones, datos, visibilidad) y deja fija la geometría del fabricante.</li>
+    </ul>
+  </div>
+
+  <div class="foot"><span>ADLB · Kit gratuito</span><span class="n">04</span></div>
+</section>
+
+<!-- ============================================================ HOJA DE TRABAJO -->
+<section class="page">
+  <div class="top"><b>ADLB<i>.</i></b><span>01 · Hoja de trabajo</span></div>
+  <div class="kicker">Hoja de trabajo</div>
+  <h1 style="font-size:24pt">Tu inventario de<br>tareas repetitivas.</h1>
+  <div class="rule"></div>
+  <p class="muted">Durante una semana, anota cada tarea que repitas al crear o ajustar familias. Al final, suma y decide.</p>
+  <table class="worksheet">
+    <tr><th style="width:42%">Tarea</th><th>Veces / semana</th><th>Min.</th><th>F</th><th>T</th><th>R</th><th>Total</th><th style="width:16%">Decisión</th></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  </table>
+  <div class="grid2" style="margin-top:6mm">
+    <div class="card"><div class="num">CÁLCULO RÁPIDO</div>
+      <p style="margin:0">Horas al año = veces/semana × min × 48 ÷ 60.<br>
+      <span class="muted">Ej.: 5 veces × 20 min → <strong>80 h/año</strong> en una sola tarea.</span></p></div>
+    <div class="card dark"><div class="num">REGLA ADLB</div>
+      <p style="margin:0">A la 1.ª vez, hazla. A la 3.ª, escríbela.<br>A la 4.ª, <span class="o">automatízala.</span></p></div>
+  </div>
+  <div class="foot"><span>ADLB · Kit gratuito</span><span class="n">05</span></div>
+</section>
+
+<!-- ============================================================ PLANTILLA 1 -->
+<section class="page">
+  <div class="top"><b>ADLB<i>.</i></b><span>02 · Plantilla Dynamo</span></div>
+
+  <div class="kicker">Parte 02</div>
+  <h1>Parámetros desde<br>una tabla.</h1>
+  <div class="rule"></div>
+  <p class="lead">Escribes los parámetros una vez en un CSV (Excel sirve) y la plantilla los crea o actualiza en la
+    familia abierta, con su tipo de dato, grupo, valor o fórmula, en todos los tipos a la vez.</p>
+
+  <h2>El gráfico</h2>
+  <svg class="nodegraph" viewBox="0 0 170 62" font-family="Inter" font-size="3">
+    <g fill="#FFFFFF" stroke="#0E0E0E" stroke-width=".35">
+      <rect x="2" y="4" width="44" height="9"/><rect x="2" y="17" width="44" height="9"/>
+      <rect x="2" y="30" width="44" height="9"/><rect x="2" y="43" width="44" height="9"/>
+    </g>
+    <g fill="#0E0E0E">
+      <text x="5" y="9.7">1 · File Path — tabla .csv</text>
+      <text x="5" y="22.7">2 · File Path — compartidos .txt</text>
+      <text x="5" y="35.7">3 · Boolean — SIMULAR</text>
+      <text x="5" y="48.7">4 · Boolean — EJECUTAR</text>
+    </g>
+    <g fill="none" stroke="#E76A1F" stroke-width=".45">
+      <path d="M46 8.5 C58 8.5 58 20 70 20"/><path d="M46 21.5 C58 21.5 58 25 70 25"/>
+      <path d="M46 34.5 C58 34.5 58 30 70 30"/><path d="M46 47.5 C58 47.5 58 35 70 35"/>
+      <path d="M118 27.5 C124 27.5 124 27.5 130 27.5"/>
+    </g>
+    <rect x="70" y="14" width="48" height="27" fill="#0E0E0E"/>
+    <text x="74" y="21" fill="#E76A1F" font-weight="700">Python Script</text>
+    <text x="74" y="26" fill="#F5F4F0">ADLB · Parámetros</text>
+    <text x="74" y="30.5" fill="#F5F4F0">desde CSV</text>
+    <text x="74" y="37" fill="#A9A7A0" font-size="2.4">CPython3 · IN[0..3] → OUT</text>
+    <rect x="130" y="18" width="38" height="19" fill="#FFFFFF" stroke="#0E0E0E" stroke-width=".35"/>
+    <text x="133" y="23" fill="#0E0E0E" font-weight="700">Watch</text>
+    <text x="133" y="28" fill="#6B6B66" font-size="2.4">Resumen + registro</text>
+    <text x="133" y="31.5" fill="#6B6B66" font-size="2.4">OK / AVISO / ERROR</text>
+  </svg>
+
+  <h2>Cómo usarla</h2>
+  <div class="grid2">
+    <div>
+      <h3>1 · Prepara la tabla</h3>
+      <p>Copia <span class="mono">ADLB_Parametros_ejemplo.csv</span>, edítala en Excel y guárdala como
+        <em>CSV UTF-8</em>. Una fila por parámetro.</p>
+      <h3>2 · Abre la familia</h3>
+      <p>Abre el <span class="mono">.rfa</span> en el Editor de familias y lanza Dynamo <strong>desde ahí</strong>
+        (Gestionar › Dynamo). Abre <span class="mono">ADLB_Parametros_desde_CSV.dyn</span>.</p>
+    </div>
+    <div>
+      <h3>3 · Simula</h3>
+      <p>Selecciona el CSV, deja <span class="mono">SIMULAR = True</span>, pon <span class="mono">EJECUTAR = True</span>
+        y pulsa Ejecutar. El registro muestra qué crearía y valida cada valor.</p>
+      <h3>4 · Aplica</h3>
+      <p>Si no hay errores, cambia <span class="mono">SIMULAR = False</span> y ejecuta de nuevo. Todo va en una
+        transacción: <strong>Ctrl+Z</strong> la deshace completa.</p>
+    </div>
+  </div>
+
+  <div class="tip"><span class="kicker">Buena práctica</span>
+    Usa parámetros <strong>compartidos</strong> para todo lo que vayas a etiquetar o tabular en el proyecto
+    (código del equipo, sistema, peso). Los de familia sirven para la lógica interna (medidas, fórmulas, visibilidad).</div>
+
+  <div class="foot"><span>ADLB · Kit gratuito</span><span class="n">06</span></div>
+</section>
+
+<!-- ============================================================ PLANTILLA 2 -->
+<section class="page">
+  <div class="top"><b>ADLB<i>.</i></b><span>02 · Plantilla Dynamo</span></div>
+
+  <h2 style="margin-top:0">Columnas del CSV</h2>
+  <table>
+    <tr><th style="width:17%">Columna</th><th>Qué poner</th><th style="width:34%">Valores válidos</th></tr>
+    <tr><td><strong>Nombre</strong></td><td>Nombre exacto del parámetro, sin espacios.</td><td class="mono">Peso_kg, Conexion_Entrada_DN</td></tr>
+    <tr><td><strong>TipoDato</strong></td><td>Tipo de dato del parámetro.</td><td class="mono">Longitud · Texto · Numero · Entero · SiNo · Angulo · Area · Volumen · Material · URL</td></tr>
+    <tr><td><strong>Grupo</strong></td><td>Grupo de la ventana de propiedades.</td><td class="mono">Dimensiones · Restricciones · Datos · Identidad · Materiales · Texto · Graficos · Mecanico · Electrico · Fontaneria · Estructural · General</td></tr>
+    <tr><td><strong>Instancia</strong></td><td>Si = instancia, No = tipo.</td><td class="mono">Si · No</td></tr>
+    <tr><td><strong>Compartido</strong></td><td>Si = se toma del archivo de compartidos por nombre.</td><td class="mono">Si · No</td></tr>
+    <tr><td><strong>Valor</strong></td><td>Se asigna a todos los tipos. Longitudes en mm, ángulos en grados, material por nombre.</td><td class="mono">1200 · Si · Acero · EQ-01</td></tr>
+    <tr><td><strong>Formula</strong></td><td>Fórmula de Revit. Si hay fórmula, se ignora Valor.</td><td class="mono">Largo * Ancho</td></tr>
+  </table>
+
+  <h3 style="margin-top:5mm">Ejemplo</h3>
+<pre><span class="c"># Las lineas que empiezan con # se ignoran. Separador ; o ,</span>
+<span class="k">Nombre;TipoDato;Grupo;Instancia;Compartido;Valor;Formula</span>
+Largo;Longitud;Dimensiones;No;No;1200;
+Ancho;Longitud;Dimensiones;No;No;600;
+Area_Huella;Area;Dimensiones;No;No;;Largo * Ancho
+Holgura_Mantenimiento;Longitud;Restricciones;Si;No;800;
+Codigo_Equipo;Texto;Identidad;Si;No;EQ-01;
+Peso_kg;Numero;Datos;No;No;350;
+Nivel_Desarrollo;Texto;Datos;No;No;350;
+Conexion_Entrada_DN;Longitud;Mecanico;No;No;100;
+Mostrar_Zona_Servicio;SiNo;Graficos;Si;No;Si;</pre>
+
+  <h3>Lo que verás en el registro</h3>
+<pre><span class="k">SIMULACION (no se modifico nada): 16 filas | 16 nuevos | 0 existentes | 0 errores</span>
+CREAR  fila 1  Largo (Longitud, tipo)
+       valor: 1200
+CREAR  fila 4  Area_Huella (Area, tipo)
+       formula: Largo * Ancho
+<span class="c">AVISO  fila 7  Peso_kg ya existe como instancia (el CSV dice tipo): no se cambia</span>
+<span class="k">ERROR  fila 9  Material_Cuerpo -> material "Acero" no existe en la familia</span></pre>
+
+  <div class="grid2" style="margin-top:3mm">
+    <div class="card"><div class="num">LO QUE HACE</div>
+      <ul class="clean"><li>Crea lo que falta y actualiza lo que existe.</li><li>Asigna el valor a todos los tipos.</li><li>Valida unidades y materiales antes de aplicar.</li></ul></div>
+    <div class="card"><div class="num">LO QUE NO HACE</div>
+      <ul class="clean"><li>No borra parámetros.</li><li>No cambia un parámetro de tipo a instancia: te avisa.</li><li>No modifica tu archivo de compartidos.</li></ul></div>
+  </div>
+
+  <div class="foot"><span>ADLB · Kit gratuito</span><span class="n">07</span></div>
+</section>
+
+<!-- ============================================================ CHECKLIST 1 -->
+<section class="page">
+  <div class="top"><b>ADLB<i>.</i></b><span>03 · Checklist de control</span></div>
+
+  <div class="kicker">Parte 03</div>
+  <h1>Antes de cargar<br>al proyecto.</h1>
+  <div class="rule"></div>
+  <p class="muted" style="margin-bottom:4mm">Marca cada punto. Si alguno no aplica, táchalo: una casilla vacía es una duda.</p>
+
+  <div class="grid2">
+    <div>
+      <div class="ck"><h3><span class="mono">A</span>Base de la familia</h3><ul>
+        <li><span class="box"></span><span>Plantilla y <strong>categoría</strong> correctas (equipo mecánico, accesorio…).</span></li>
+        <li><span class="box"></span><span><strong>Origen</strong> en un punto útil para colocar y acotar (eje, anclaje, borde de base).</span></li>
+        <li><span class="box"></span><span>Planos de referencia con <strong>nombre</strong> en ejes, anclajes y conexiones.</span></li>
+        <li><span class="box"></span><span>Nombre de archivo y de tipo según tu <strong>estándar de nomenclatura</strong>.</span></li>
+        <li><span class="box"></span><span>Fuente de la geometría identificada <em>(ficha, plano del proveedor, medición)</em>.</span></li>
+      </ul></div>
+
+      <div class="ck"><h3><span class="mono">B</span>Parámetros</h3><ul>
+        <li><span class="box"></span><span>Nombres del estándar, <strong>sin duplicados</strong> ni variantes.</span></li>
+        <li><span class="box"></span><span><strong>Tipo vs. instancia</strong> decidido a propósito, no por defecto.</span></li>
+        <li><span class="box"></span><span>Lo que se etiqueta o tabula es <strong>compartido</strong>.</span></li>
+        <li><span class="box"></span><span>Cada parámetro en su <strong>grupo</strong> correcto.</span></li>
+        <li><span class="box"></span><span><strong>Fórmulas</strong> sin errores ni referencias circulares.</span></li>
+        <li><span class="box"></span><span><strong>Valores</strong> cargados en todos los tipos (ninguno en 0 sin querer).</span></li>
+        <li><span class="box"></span><span>Fabricante, modelo, descripción y comentarios de tipo completos.</span></li>
+        <li><span class="box"></span><span>Set de información (LOI) completo: código, sistema, peso, nivel de desarrollo, fecha.</span></li>
+        <li><span class="box"></span><span>Lo pendiente está marcado como <strong>POR CONFIRMAR</strong>, no inventado.</span></li>
+      </ul></div>
+    </div>
+    <div>
+      <div class="ck"><h3><span class="mono">C</span>Geometría</h3><ul>
+        <li><span class="box"></span><span>Medidas generales <strong>verificadas</strong> contra la ficha (largo, ancho, alto).</span></li>
+        <li><span class="box"></span><span>Nivel de detalle acorde al <strong>LOD</strong> pedido, ni más ni menos.</span></li>
+        <li><span class="box"></span><span><strong>Subcategorías</strong> asignadas (cuerpo, motores, estructura, conexiones).</span></li>
+        <li><span class="box"></span><span><strong>Materiales</strong> ligados a parámetros, no fijos en el sólido.</span></li>
+        <li><span class="box"></span><span>Piezas menores ocultas en nivel de detalle <strong>Bajo</strong> (pernos, manijas).</span></li>
+        <li><span class="box"></span><span><strong>Zonas de servicio</strong> modeladas y con visibilidad controlable.</span></li>
+        <li><span class="box"></span><span>Sin sólidos sobrantes, vacíos sueltos ni geometría importada innecesaria.</span></li>
+        <li><span class="box"></span><span>Se lee bien en <strong>planta, alzado y 3D</strong>.</span></li>
+      </ul></div>
+
+      <div class="ck"><h3><span class="mono">D</span>Conectores</h3><ul>
+        <li><span class="box"></span><span>Tipo correcto: tubería, ducto, eléctrico.</span></li>
+        <li><span class="box"></span><span><strong>Clasificación de sistema</strong> y dirección de flujo definidas.</span></li>
+        <li><span class="box"></span><span><strong>Tamaño ligado a un parámetro</strong>, no escrito en el conector.</span></li>
+        <li><span class="box"></span><span>Sobre la <strong>cara de la brida</strong> y mirando hacia afuera.</span></li>
+        <li><span class="box"></span><span>Datos eléctricos: tensión, polos, carga.</span></li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="foot"><span>ADLB · Kit gratuito</span><span class="n">08</span></div>
+</section>
+
+<!-- ============================================================ CHECKLIST 2 -->
+<section class="page">
+  <div class="top"><b>ADLB<i>.</i></b><span>03 · Checklist de control</span></div>
+
+  <div class="grid2">
+    <div>
+      <div class="ck"><h3><span class="mono">E</span>Funcionamiento</h3><ul>
+        <li><span class="box"></span><span><strong>Flexiona</strong> cada tipo en el editor: cambia valores y vuelve a los originales.</span></li>
+        <li><span class="box"></span><span>Prueba <strong>valores extremos</strong> (mínimo, máximo, cero) y revisa que nada se rompa.</span></li>
+        <li><span class="box"></span><span>Cárgala en un <strong>proyecto de prueba</strong>, no en el proyecto real.</span></li>
+        <li><span class="box"></span><span>La <strong>etiqueta</strong> lee los parámetros compartidos.</span></li>
+        <li><span class="box"></span><span>Aparece completa en una <strong>tabla de planificación</strong>.</span></li>
+        <li><span class="box"></span><span>Conecta un tramo de tubería o ducto a cada conector y revisa el sistema.</span></li>
+        <li><span class="box"></span><span>Se corta bien en planta y en sección.</span></li>
+      </ul></div>
+    </div>
+    <div>
+      <div class="ck"><h3><span class="mono">F</span>Entrega</h3><ul>
+        <li><span class="box"></span><span><strong>Purga</strong> elementos no usados.</span></li>
+        <li><span class="box"></span><span>Peso del archivo razonable para su uso.</span></li>
+        <li><span class="box"></span><span>Fecha de modelado y versión actualizadas.</span></li>
+        <li><span class="box"></span><span>Copia en la <strong>biblioteca</strong> con el nombre final.</span></li>
+        <li><span class="box"></span><span>Registro del script guardado junto a la familia.</span></li>
+        <li><span class="box"></span><span>Al recargar en el proyecto: <strong>sobrescribir</strong> y revisar instancias.</span></li>
+        <li><span class="box"></span><span>Pendientes anotados para la siguiente versión.</span></li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="card dark" style="margin-top:4mm">
+    <div class="num">RESULTADO</div>
+    <table style="color:#F5F4F0">
+      <tr><td style="border-color:#2c2c2a"><strong>41 / 41</strong></td><td style="border-color:#2c2c2a">Lista para el proyecto.</td></tr>
+      <tr><td style="border-color:#2c2c2a"><strong>35–40</strong></td><td style="border-color:#2c2c2a">Carga con pendientes anotados y comunícalos al equipo.</td></tr>
+      <tr><td style="border:none"><strong>&lt; 35</strong></td><td style="border:none">Vuelve al editor. Lo que falla en la familia falla multiplicado en el modelo.</td></tr>
+    </table>
+  </div>
+
+  <h2>Pasa la checklist a tu script</h2>
+  <p>Varios puntos de esta lista se pueden revisar solos: nombres fuera del estándar, parámetros sin valor,
+    conectores sin tamaño ligado, materiales fijos. Empieza marcando a mano y, cuando un punto falle seguido,
+    conviértelo en una línea del registro.</p>
+
+  <div class="foot"><span>ADLB · Kit gratuito</span><span class="n">09</span></div>
+</section>
+
+<!-- ============================================================ CIERRE -->
+<section class="page cover">
+  <svg class="grid" viewBox="0 0 120 120" aria-hidden="true" style="top:auto;bottom:-20mm;right:-20mm;opacity:.6">
+    <rect width="120" height="120" fill="url(#g)"/>
+  </svg>
+  <div class="in">
+    <div class="brand">ADLB<i>.</i></div>
+    <div class="tag">
+      <div class="kicker">El siguiente nivel</div>
+      <h1 style="font-size:36pt">De parámetros<br>a familias<br>completas<span>.</span></h1>
+      <p class="sub">Con el mismo principio (datos en un archivo, lógica en una herramienta) se puede generar la
+        familia entera: geometría desde las cotas del fabricante, bridas y pernos, conectores con su tamaño ligado,
+        zonas de servicio y todo el set de información. Un archivo de datos por equipo y una herramienta para todos.</p>
+      <div class="items">
+        <div><b>01</b><strong>Detecta</strong>Usa la hoja de trabajo durante una semana.</div>
+        <div><b>02</b><strong>Automatiza</strong>Empieza por tu tabla de parámetros.</div>
+        <div><b>03</b><strong>Comparte</strong>Cuéntame qué tarea automatizaste primero.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

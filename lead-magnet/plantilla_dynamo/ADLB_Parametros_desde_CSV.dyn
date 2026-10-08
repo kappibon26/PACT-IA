@@ -1,0 +1,333 @@
+{
+  "Uuid": "2dee6425-1850-403e-87e5-139af2617651",
+  "IsCustomNode": false,
+  "Description": "ADLB - crear y asignar parametros de familia desde CSV",
+  "Name": "ADLB_Parametros_desde_CSV",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "HintPath": "C:\\RUTA\\ADLB_Parametros_ejemplo.csv",
+      "InputValue": "C:\\RUTA\\ADLB_Parametros_ejemplo.csv",
+      "NodeType": "ExtensionNode",
+      "Id": "22a6130a6485434798c10806f94cdfc3",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "30f1bc21a7014a97ae32189e37b028a8",
+          "Name": "",
+          "Description": "Ruta",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "1 - Tabla de parametros (.csv)"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.Filename, CoreNodeModels",
+      "HintPath": "C:\\RUTA\\Parametros_Compartidos.txt",
+      "InputValue": "C:\\RUTA\\Parametros_Compartidos.txt",
+      "NodeType": "ExtensionNode",
+      "Id": "58c5052c9ece46cd8ca9c0a770caf50c",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "aa9b1842bd4f4b228de7b248d6e67f94",
+          "Name": "",
+          "Description": "Ruta",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "2 - Parametros compartidos (.txt, opcional)"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "NodeType": "BooleanInputNode",
+      "InputValue": true,
+      "Id": "4aee64ebceab431ba09c543ab57155ea",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "b1dc38436067410ab9e8af89691f3763",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "3 - SIMULAR (True = solo revisar)"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "NodeType": "BooleanInputNode",
+      "InputValue": false,
+      "Id": "2ec281edd7ca44eb9e2d4b4258e46954",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "adbc9815b2e641d8bfeb5cd8ccd36dd7",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "4 - EJECUTAR"
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "NodeType": "PythonScriptNode",
+      "Code": "# -*- coding: utf-8 -*-\n\"\"\"\nADLB · Plantilla base · Crear y asignar parametros de familia desde un CSV\nRevit 2022+ · Dynamo 2.x · nodo Python (CPython3 o IronPython 2.7)\n\nUSO\n  1. Abra la FAMILIA (.rfa) en el Editor de familias de Revit.\n  2. Desde esa familia abra Dynamo y luego ADLB_Parametros_desde_CSV.dyn.\n  3. Entradas:\n       IN[0]  ruta del CSV de parametros (ver ADLB_Parametros_ejemplo.csv)\n       IN[1]  archivo de parametros compartidos (.txt). Vacio si no usa compartidos.\n       IN[2]  SIMULAR (True = solo revisa y reporta, no modifica la familia)\n       IN[3]  EJECUTAR (False mientras edita las entradas; True para correr)\n  4. Corra el grafico en modo Manual y lea el registro de la salida.\n\nCOLUMNAS DEL CSV (separador ; o ,  -  codificacion UTF-8)\n  Nombre      nombre del parametro\n  TipoDato    Longitud | Texto | Numero | Entero | SiNo | Angulo | Area | Volumen | Material | URL\n  Grupo       Dimensiones | Restricciones | Datos | Identidad | Materiales | Texto | Graficos |\n              Mecanico | Electrico | Fontaneria | Estructural | General\n  Instancia   Si | No\n  Compartido  Si | No   (Si = se toma del archivo de parametros compartidos, por nombre)\n  Valor       valor para TODOS los tipos (longitudes en mm, angulos en grados, SiNo = Si/No,\n              Material = nombre del material de la familia). Vacio = no asigna.\n  Formula     formula de Revit (opcional). Si hay formula, se ignora Valor.\n\nQUE HACE\n  - Crea el parametro si no existe; si ya existe, solo actualiza valor / formula.\n  - Avisa si un parametro existente difiere del CSV (instancia/tipo) en lugar de cambiarlo.\n  - Asigna el valor a todos los tipos de la familia.\n  - No borra nada.  Todo queda en una sola transaccion: Ctrl+Z la deshace completa.\n\"\"\"\nimport io\nimport os\nimport clr\n\nclr.AddReference('RevitAPI')\nclr.AddReference('RevitServices')\nfrom Autodesk.Revit.DB import (FilteredElementCollector, GroupTypeId, Material, SpecTypeId, UnitTypeId,\n                               UnitUtils)\nfrom RevitServices.Persistence import DocumentManager\nfrom RevitServices.Transactions import TransactionManager\n\ncsv_path = IN[0]\nshared_path = IN[1] if len(IN) > 1 else None\nsimular = bool(IN[2]) if len(IN) > 2 else True\nejecutar = bool(IN[3]) if len(IN) > 3 else False\n\nTIPOS = {   # TipoDato -> (ruta SpecTypeId, conversion del valor)\n    'longitud': ('Length', 'mm'),\n    'texto': ('String.Text', 'txt'),\n    'url': ('String.Url', 'txt'),\n    'numero': ('Number', 'num'),\n    'entero': ('Int.Integer', 'int'),\n    'sino': ('Boolean.YesNo', 'bool'),\n    'angulo': ('Angle', 'deg'),\n    'area': ('Area', 'm2'),\n    'volumen': ('Volume', 'm3'),\n    'material': ('Reference.Material', 'mat'),\n}\nGRUPOS = {\n    'dimensiones': 'Geometry', 'restricciones': 'Constraints', 'datos': 'Data',\n    'identidad': 'IdentityData', 'materiales': 'Materials', 'texto': 'Text',\n    'graficos': 'Graphics', 'mecanico': 'Mechanical', 'electrico': 'Electrical',\n    'fontaneria': 'Plumbing', 'estructural': 'Structural', 'general': 'General',\n}\nSI = ('si', 'sí', 's', 'yes', 'y', 'true', '1', 'x')\n\n\ndef norm(t):\n    t = (u'%s' % (t or u'')).strip().lower()\n    for a, b in ((u'á', u'a'), (u'é', u'e'), (u'í', u'i'), (u'ó', u'o'), (u'ú', u'u'), (u' ', u'')):\n        t = t.replace(a, b)\n    return t\n\n\ndef spec_id(path):\n    obj = SpecTypeId\n    for part in path.split('.'):\n        obj = getattr(obj, part)\n    return obj\n\n\ndef leer_csv(path):\n    with io.open(path, 'r', encoding='utf-8-sig') as f:\n        lineas = [l.rstrip('\\r\\n') for l in f if l.strip() and not l.lstrip().startswith('#')]\n    sep = ';' if lineas[0].count(';') >= lineas[0].count(',') else ','\n    cab = [norm(c) for c in lineas[0].split(sep)]\n    filas = []\n    for n, l in enumerate(lineas[1:], 2):\n        celdas = [c.strip() for c in l.split(sep)]\n        celdas += [u''] * (len(cab) - len(celdas))\n        fila = dict(zip(cab, celdas))\n        fila['_fila'] = n - 1\n        filas.append(fila)\n    return filas\n\n\ndef convertir(valor, modo, doc):\n    v = (u'%s' % valor).strip()\n    if modo == 'txt':\n        return v\n    if modo == 'bool':\n        return 1 if norm(v) in SI else 0\n    if modo == 'mat':\n        for m in FilteredElementCollector(doc).OfClass(Material):\n            if norm(m.Name) == norm(v):\n                return m.Id\n        raise Exception(u'material \"%s\" no existe en la familia' % v)\n    num = float(v.replace(',', '.'))\n    if modo == 'int':\n        return int(round(num))\n    if modo == 'num':\n        return num\n    unidad = {'mm': UnitTypeId.Millimeters, 'deg': UnitTypeId.Degrees,\n              'm2': UnitTypeId.SquareMeters, 'm3': UnitTypeId.CubicMeters}[modo]\n    return UnitUtils.ConvertToInternalUnits(num, unidad)\n\n\ndef definiciones_compartidas(app, path):\n    if not path or not os.path.exists(path):\n        return {}\n    previo = app.SharedParametersFilename\n    try:\n        app.SharedParametersFilename = path\n        archivo = app.OpenSharedParameterFile()\n        return dict((d.Name, d) for g in archivo.Groups for d in g.Definitions)\n    finally:\n        if previo:\n            app.SharedParametersFilename = previo\n\n\ndef procesar(doc, app, filas, shared_defs, simular, log):\n    fm = doc.FamilyManager\n    if fm.CurrentType is None:\n        fm.NewType(u'Tipo 1')\n        log.append(u'AVISO  la familia no tenia tipos: se creo \"Tipo 1\"')\n    tipos = list(fm.Types)\n    creados = actualizados = errores = 0\n    for f in filas:\n        nombre = f.get('nombre', u'')\n        ref = u'fila %d  %s' % (f['_fila'], nombre)\n        try:\n            if not nombre:\n                raise Exception(u'sin nombre')\n            tipo = TIPOS.get(norm(f.get('tipodato')))\n            if tipo is None:\n                raise Exception(u'TipoDato \"%s\" no reconocido' % f.get('tipodato'))\n            grupo = getattr(GroupTypeId, GRUPOS.get(norm(f.get('grupo')), 'Data'), GroupTypeId.Data)\n            inst = norm(f.get('instancia')) in SI\n            comp = norm(f.get('compartido')) in SI\n            fp = fm.get_Parameter(nombre)\n            if fp is None:\n                if simular:\n                    log.append(u'CREAR  %s (%s, %s)' % (ref, f.get('tipodato'), u'instancia' if inst else u'tipo'))\n                else:\n                    if comp:\n                        d = shared_defs.get(nombre)\n                        if d is None:\n                            raise Exception(u'no esta en el archivo de parametros compartidos')\n                        fp = fm.AddParameter(d, grupo, inst)\n                    else:\n                        fp = fm.AddParameter(nombre, grupo, spec_id(tipo[0]), inst)\n                    log.append(u'OK     creado %s' % ref)\n                creados += 1\n            else:\n                if fp.IsInstance != inst:\n                    log.append(u'AVISO  %s ya existe como %s (el CSV dice %s): no se cambia' % (\n                        ref, u'instancia' if fp.IsInstance else u'tipo', u'instancia' if inst else u'tipo'))\n                actualizados += 1\n            formula = f.get('formula', u'')\n            valor = f.get('valor', u'')\n            if simular:\n                if formula:\n                    log.append(u'       formula: %s' % formula)\n                elif valor:\n                    convertir(valor, tipo[1], doc)          # valida el valor aunque no lo asigne\n                    log.append(u'       valor: %s' % valor)\n                continue\n            if formula:\n                fm.SetFormula(fp, formula)\n            elif valor:\n                v = convertir(valor, tipo[1], doc)\n                for t in tipos:\n                    fm.CurrentType = t\n                    fm.Set(fp, v)\n        except Exception as ex:\n            errores += 1\n            log.append(u'ERROR  %s -> %s' % (ref, (u'%s' % ex).replace(u'\\n', u' | ')))\n    return creados, actualizados, errores\n\n\nif not ejecutar:\n    OUT = [u'EJECUTAR = False. Revise las entradas y ponga EJECUTAR = True.']\nelse:\n    doc = DocumentManager.Instance.CurrentDBDocument\n    app = DocumentManager.Instance.CurrentUIApplication.Application\n    log = []\n    if not doc.IsFamilyDocument:\n        OUT = [u'ERROR  Abra Dynamo desde una FAMILIA (Editor de familias), no desde un proyecto.']\n    elif not csv_path or not os.path.exists(u'%s' % csv_path):\n        OUT = [u'ERROR  No se encuentra el CSV: %s' % csv_path]\n    else:\n        filas = leer_csv(csv_path)\n        defs = definiciones_compartidas(app, shared_path)\n        if not simular:\n            TransactionManager.Instance.EnsureInTransaction(doc)\n        c, a, e = procesar(doc, app, filas, defs, simular, log)\n        if not simular:\n            TransactionManager.Instance.TransactionTaskDone()\n        modo = u'SIMULACION (no se modifico nada)' if simular else u'APLICADO'\n        OUT = [u'%s: %d filas | %d nuevos | %d existentes | %d errores' % (modo, len(filas), c, a, e)] + log\n",
+      "Engine": "CPython3",
+      "VariableInputPorts": true,
+      "Id": "2e948e8c3c594f958d0c5e95d7c8c1b3",
+      "Inputs": [
+        {
+          "Id": "3755ff7643e0488f8d57747e5eaff506",
+          "Name": "IN[0]",
+          "Description": "Input #0",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "9a414db5d6144e5f854206831a72f56a",
+          "Name": "IN[1]",
+          "Description": "Input #1",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "e3e8935ce5bc4f6a895db54e51039589",
+          "Name": "IN[2]",
+          "Description": "Input #2",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "21e16f3f18cc48f8ab82807c4b25b690",
+          "Name": "IN[3]",
+          "Description": "Input #3",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "8e16cc769a49465aae71453b892c6d95",
+          "Name": "OUT",
+          "Description": "Registro",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "ADLB - parametros desde CSV"
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "NodeType": "ExtensionNode",
+      "Id": "a2db805a2c7048eea396764291ccfd3e",
+      "Inputs": [
+        {
+          "Id": "ab88bc75ee014e97b0a805727590d782",
+          "Name": "",
+          "Description": "Node to show output from",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "5338f11deb5745e1be714ccb95c0588d",
+          "Name": "",
+          "Description": "Node output",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Registro"
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "30f1bc21a7014a97ae32189e37b028a8",
+      "End": "3755ff7643e0488f8d57747e5eaff506",
+      "Id": "3683b3a9f4e94db48b86c17f4adad01d",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "aa9b1842bd4f4b228de7b248d6e67f94",
+      "End": "9a414db5d6144e5f854206831a72f56a",
+      "Id": "c4ce2d602b37438bbd0a742fd66964c1",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "b1dc38436067410ab9e8af89691f3763",
+      "End": "e3e8935ce5bc4f6a895db54e51039589",
+      "Id": "fe10900c1a9147369dd61a73884c8409",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "adbc9815b2e641d8bfeb5cd8ccd36dd7",
+      "End": "21e16f3f18cc48f8ab82807c4b25b690",
+      "Id": "9cb06810738442a49ac4ad38186db44c",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "8e16cc769a49465aae71453b892c6d95",
+      "End": "ab88bc75ee014e97b0a805727590d782",
+      "Id": "65f2b0e9371f4dd8819fbb12d2e31b97",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "Thumbnail": "",
+  "GraphDocumentationURL": null,
+  "ExtensionWorkspaceData": [],
+  "Author": "ADLB",
+  "Linting": {},
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": true,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "2.17.0.3472",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "Background Preview",
+      "EyeX": -17.0,
+      "EyeY": 24.0,
+      "EyeZ": 50.0,
+      "LookX": 12.0,
+      "LookY": -13.0,
+      "LookZ": -58.0,
+      "UpX": 0.0,
+      "UpY": 1.0,
+      "UpZ": 0.0
+    },
+    "ConnectorPins": [],
+    "NodeViews": [
+      {
+        "Id": "22a6130a6485434798c10806f94cdfc3",
+        "Name": "1 - Tabla de parametros (.csv)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 0
+      },
+      {
+        "Id": "58c5052c9ece46cd8ca9c0a770caf50c",
+        "Name": "2 - Parametros compartidos (.txt, opcional)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 130
+      },
+      {
+        "Id": "4aee64ebceab431ba09c543ab57155ea",
+        "Name": "3 - SIMULAR (True = solo revisar)",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 260
+      },
+      {
+        "Id": "2ec281edd7ca44eb9e2d4b4258e46954",
+        "Name": "4 - EJECUTAR",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 0,
+        "Y": 370
+      },
+      {
+        "Id": "2e948e8c3c594f958d0c5e95d7c8c1b3",
+        "Name": "ADLB - Parametros desde CSV",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 520,
+        "Y": 160
+      },
+      {
+        "Id": "a2db805a2c7048eea396764291ccfd3e",
+        "Name": "Registro",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 900,
+        "Y": 160
+      }
+    ],
+    "Annotations": [
+      {
+        "Id": "b7e10ce9df4e4552b8015a05cbf93212",
+        "Title": "ADLB · Automatiza tus familias de Revit\n1. Abre la FAMILIA en el Editor de familias y lanza Dynamo desde ahi.\n2. Elige el CSV y (opcional) el archivo de compartidos.\n3. Corre con SIMULAR = True y revisa el registro.\n4. Pasa SIMULAR a False y EJECUTAR a True. Ctrl+Z deshace todo.",
+        "DescriptionText": null,
+        "IsExpanded": true,
+        "WidthAdjustment": 0.0,
+        "HeightAdjustment": 0.0,
+        "Nodes": [],
+        "HasNestedGroups": false,
+        "Left": 0.0,
+        "Top": -190.0,
+        "Width": 0.0,
+        "Height": 0.0,
+        "FontSize": 14.0,
+        "GroupStyleId": "00000000-0000-0000-0000-000000000000",
+        "InitialTop": 0.0,
+        "InitialHeight": 0.0,
+        "TextblockHeight": 0.0,
+        "Background": "#FFE76A1F"
+      }
+    ],
+    "X": 60.0,
+    "Y": 260.0,
+    "Zoom": 0.8
+  }
+}
