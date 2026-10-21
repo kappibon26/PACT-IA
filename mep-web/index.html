@@ -1,0 +1,330 @@
+<title>PACT MEP</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap">
+<style>
+/* Distribución tipo Revit: cinta arriba, navegador de proyecto | lienzo | propiedades, tablas abajo.
+   Naranja de seguridad (zonas de servicio AVSA) como único acento; neutros grises con sesgo verde. */
+:root {
+  --bg: #e9ece8;
+  --panel: #f7f8f6;
+  --panel-2: #eef1ed;
+  --ink: #1b2124;
+  --muted: #5b6763;
+  --line: #d0d6d0;
+  --accent: #d9590b;
+  --accent-ink: #ffffff;
+  --accent-soft: #fbe3d3;
+  --canvas: #e2e6e1;
+  --grid: #c3cac3;
+  --grid-strong: #a4aea5;
+  --ok: #2f8a4c;
+  --warn: #b7791f;
+  --err: #c0263a;
+  --info: #3a6f9e;
+  --font-ui: "IBM Plex Sans Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14191b; --panel: #1b2124; --panel-2: #20272a; --ink: #e2e8e4; --muted: #92a09a; --line: #2f383b;
+    --accent: #f0782a; --accent-ink: #1b1208; --accent-soft: #3a2415; --canvas: #1f2629; --grid: #2c3538; --grid-strong: #3e4a4d;
+    --ok: #5cc27e; --warn: #e0a84a; --err: #f06a7a; --info: #7fb0dc; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14191b; --panel: #1b2124; --panel-2: #20272a; --ink: #e2e8e4; --muted: #92a09a; --line: #2f383b;
+  --accent: #f0782a; --accent-ink: #1b1208; --accent-soft: #3a2415; --canvas: #1f2629; --grid: #2c3538; --grid-strong: #3e4a4d;
+  --ok: #5cc27e; --warn: #e0a84a; --err: #f06a7a; --info: #7fb0dc; color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 14px; overflow: hidden; }
+* { box-sizing: border-box; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto auto auto 1fr auto auto;
+  padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+
+/* ---------------- barra y cinta */
+.barra { display: flex; align-items: stretch; gap: 0; background: var(--panel); border-bottom: 1px solid var(--line); min-width: 0; }
+.marca { display: flex; align-items: center; gap: 8px; padding: 0 14px 0 max(12px, env(safe-area-inset-left, 0px)); font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
+.marca svg { width: 20px; height: 20px; flex: none; }
+.marca small { font-weight: 500; color: var(--muted); font-size: 12px; }
+.pestanas { display: flex; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.pestanas button { border: 0; background: none; padding: 9px 14px 8px; cursor: pointer; color: var(--muted); font-weight: 600;
+  border-bottom: 2px solid transparent; white-space: nowrap; }
+.pestanas button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.barra .der { margin-left: auto; display: flex; align-items: center; gap: 4px; padding-right: max(10px, env(safe-area-inset-right, 0px)); }
+.proyecto-nombre { color: var(--muted); font-size: 13px; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 8px; }
+
+.cinta { display: flex; gap: 6px; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--line); overflow-x: auto; min-width: 0; }
+.cinta [role="tabpanel"] { display: flex; gap: 6px; align-items: stretch; }
+.grupo { display: flex; flex-direction: column; gap: 2px; padding-right: 8px; border-right: 1px solid var(--line); }
+.grupo:last-child { border-right: 0; }
+.grupo .fila { display: flex; gap: 2px; }
+.grupo .nombre-grupo { font-size: 11px; color: var(--muted); text-align: center; letter-spacing: .06em; text-transform: uppercase; }
+.herr { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 62px; padding: 5px 6px 4px;
+  border: 1px solid transparent; border-radius: var(--r); background: none; cursor: pointer; font-size: 12.5px; white-space: nowrap; }
+.herr:hover { background: var(--panel-2); border-color: var(--line); }
+.herr[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.herr svg { width: 24px; height: 24px; }
+.herr kbd { font-family: var(--font-num); font-size: 10px; color: var(--muted); }
+.herr:disabled { opacity: .45; cursor: default; }
+
+/* ---------------- barra de opciones */
+.opciones { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 5px 12px; min-height: 38px;
+  background: var(--panel-2); border-bottom: 1px solid var(--line); font-size: 13px; }
+.opciones label { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.opciones .titulo { font-weight: 700; color: var(--ink); }
+input[type="number"], input[type="text"], select { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; min-width: 0; }
+input[type="number"] { width: 84px; font-family: var(--font-num); font-size: 12.5px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 12px; white-space: nowrap; }
+.sw { width: 10px; height: 10px; border-radius: 2px; flex: none; display: inline-block; }
+
+/* ---------------- cuerpo */
+.cuerpo { display: grid; grid-template-columns: 236px minmax(0, 1fr) 300px; min-height: 0; }
+.panel { background: var(--panel); min-height: 0; overflow: auto; }
+.navegador { border-right: 1px solid var(--line); }
+.propiedades { border-left: 1px solid var(--line); }
+.panel h2 { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0; padding: 10px 12px 6px; font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between; }
+.panel h2 button { border: 0; background: none; color: var(--accent); cursor: pointer; font-size: 12px; letter-spacing: 0; text-transform: none; font-weight: 600; }
+.arbol { list-style: none; margin: 0; padding: 0 6px 8px; }
+.arbol li > button, .arbol li > label { width: 100%; display: flex; align-items: center; gap: 8px; text-align: left; border: 0; background: none;
+  padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 13.5px; }
+.arbol li > button:hover, .arbol li > label:hover { background: var(--panel-2); }
+.arbol li > button[aria-current="true"] { background: var(--accent-soft); font-weight: 600; }
+.arbol .n { margin-left: auto; font-family: var(--font-num); font-size: 11.5px; color: var(--muted); }
+.arbol input[type="checkbox"] { accent-color: var(--accent); margin: 0; }
+.form-nivel { display: grid; grid-template-columns: 1fr 84px auto; gap: 4px; padding: 0 12px 10px; }
+
+.lienzo { position: relative; min-width: 0; min-height: 0; background: var(--canvas); overflow: hidden; }
+.lienzo canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.lienzo .hud { position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none; }
+.lienzo .hud .chip { pointer-events: auto; background: color-mix(in srgb, var(--panel) 90%, transparent); }
+.vistas { position: absolute; right: 10px; top: 10px; display: flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--panel); }
+.vistas button { border: 0; background: none; padding: 5px 12px; cursor: pointer; font-weight: 600; font-size: 13px; }
+.vistas button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.coord { position: absolute; left: 10px; bottom: 10px; font-family: var(--font-num); font-size: 12px; color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 85%, transparent); padding: 3px 8px; border-radius: 4px; }
+.snap { position: absolute; pointer-events: none; transform: translate(14px, 12px); font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
+  background: var(--ink); color: var(--panel); white-space: nowrap; }
+.brujula { position: absolute; right: 12px; bottom: 12px; width: 46px; height: 46px; pointer-events: none; color: var(--muted); }
+
+/* ---------------- propiedades */
+.prop { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 5px 8px; padding: 2px 12px 10px; align-items: center; font-size: 13px; }
+.prop .k { color: var(--muted); }
+.prop .v { font-family: var(--font-num); font-size: 12.5px; overflow-wrap: anywhere; }
+.prop select, .prop input { width: 100%; }
+.prop .sep { grid-column: 1 / -1; border-top: 1px solid var(--line); margin: 4px 0; }
+.tipo-sel { padding: 4px 12px 8px; display: flex; align-items: center; gap: 10px; }
+.tipo-sel .ic { width: 38px; height: 38px; border-radius: var(--r); display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--line); }
+.tipo-sel strong { display: block; font-size: 15px; }
+.tipo-sel span { color: var(--muted); font-size: 12.5px; }
+.acciones { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 12px; }
+.btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 4px; padding: 4px 10px; cursor: pointer; font-weight: 600; font-size: 13px; }
+.btn:hover { border-color: var(--muted); }
+.btn.pri { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.peligro { color: var(--err); }
+.conectores { list-style: none; margin: 0; padding: 0 12px 12px; display: grid; gap: 4px; font-size: 12.5px; }
+.conectores li { display: flex; align-items: center; gap: 6px; }
+.conectores li .est { margin-left: auto; font-size: 11.5px; }
+.est.ok { color: var(--ok); } .est.no { color: var(--warn); }
+.nota { color: var(--muted); font-size: 12.5px; padding: 0 12px 10px; line-height: 1.45; max-width: 65ch; }
+.resumen { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 12px 12px; }
+.resumen div { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 8px; }
+.resumen b { display: block; font-family: var(--font-num); font-size: 17px; font-weight: 600; }
+.resumen span { font-size: 11.5px; color: var(--muted); }
+.resumen .alerta b { color: var(--warn); } .resumen .mal b { color: var(--err); }
+
+/* ---------------- tablas */
+.tablas { border-top: 1px solid var(--line); background: var(--panel); display: grid; grid-template-rows: auto 1fr; height: 236px; min-height: 0; }
+.tablas.cerrado { height: auto; }
+.tablas.cerrado .contenido-tabla { display: none; }
+.tablas-cab { display: flex; align-items: center; gap: 2px; padding: 0 8px; border-bottom: 1px solid var(--line); overflow-x: auto; min-width: 0; }
+.tablas-cab button.t { border: 0; background: none; padding: 7px 10px 6px; cursor: pointer; color: var(--muted); font-weight: 600; font-size: 13px; white-space: nowrap; border-bottom: 2px solid transparent; }
+.tablas-cab button.t[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tablas-cab .badge { font-family: var(--font-num); font-size: 11px; padding: 0 5px; border-radius: 999px; background: var(--panel-2); margin-left: 4px; }
+.tablas-cab .badge.warn { background: var(--warn); color: #fff; } .tablas-cab .badge.err { background: var(--err); color: #fff; }
+.tablas-cab .der { margin-left: auto; display: flex; gap: 4px; padding-left: 8px; }
+.contenido-tabla { overflow: auto; min-height: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { padding: 4px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+th { position: sticky; top: 0; background: var(--panel-2); font-weight: 600; color: var(--muted); font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; z-index: 1; }
+td.num, th.num { text-align: right; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--panel-2); }
+tbody tr[aria-selected="true"] { background: var(--accent-soft); }
+tfoot td { font-weight: 600; background: var(--panel-2); position: sticky; bottom: 0; }
+.pill { display: inline-block; padding: 0 7px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+.pill.aviso { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }
+.pill.error { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
+.pill.info { background: color-mix(in srgb, var(--info) 18%, transparent); color: var(--info); }
+.pill.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.vacio { padding: 18px 14px; color: var(--muted); }
+
+.estado { display: flex; gap: 14px; align-items: center; padding: 4px 12px calc(4px + env(safe-area-inset-bottom, 0px)); font-size: 12.5px; color: var(--muted);
+  background: var(--panel-2); border-top: 1px solid var(--line); min-width: 0; }
+.estado .hint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.estado .der { margin-left: auto; white-space: nowrap; font-family: var(--font-num); font-size: 11.5px; }
+
+.aviso-barra { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 8px 12px; border-radius: var(--r);
+  display: flex; gap: 10px; align-items: center; font-size: 13px; z-index: 5; max-width: calc(100% - 32px); }
+.aviso-barra .btn { background: var(--panel); color: var(--ink); }
+.toast { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 6px 12px; border-radius: var(--r); font-size: 13px; z-index: 5; }
+
+@media (max-width: 980px) {
+  .cuerpo { grid-template-columns: minmax(0, 1fr) 260px; }
+  .navegador { display: none; }
+}
+@media (max-width: 680px) {
+  body { overflow: auto; }
+  .app { height: auto; min-height: 100%; }
+  .cuerpo { grid-template-columns: minmax(0, 1fr); }
+  .lienzo { height: 58vh; min-height: 320px; order: -1; }
+  .navegador { order: 3; }
+  .navegador { display: block; border-right: 0; border-top: 1px solid var(--line); max-height: none; }
+  .propiedades { border-left: 0; border-top: 1px solid var(--line); order: 2; }
+  .tablas { height: 320px; }
+  .marca small, .proyecto-nombre { display: none; }
+  .opciones { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<div class="app" id="app">
+  <header class="barra">
+    <div class="marca">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7h8v10h10"/><circle cx="11" cy="7" r="2.2" fill="var(--accent)" stroke="none"/><path d="M3 17h4" stroke="var(--accent)"/></svg>
+      PACT MEP <small>modelador de instalaciones</small>
+    </div>
+    <nav class="pestanas" role="tablist" aria-label="Cinta">
+      <button role="tab" id="tab-sistemas" aria-selected="true" aria-controls="cinta-sistemas">Sistemas</button>
+      <button role="tab" id="tab-analizar" aria-selected="false" aria-controls="cinta-analizar">Analizar</button>
+      <button role="tab" id="tab-vista" aria-selected="false" aria-controls="cinta-vista">Vista</button>
+      <button role="tab" id="tab-archivo" aria-selected="false" aria-controls="cinta-archivo">Archivo</button>
+    </nav>
+    <div class="der">
+      <span class="proyecto-nombre" id="proyecto-nombre"></span>
+    </div>
+  </header>
+
+  <div class="cinta">
+    <div role="tabpanel" id="cinta-sistemas" aria-labelledby="tab-sistemas">
+      <div class="grupo"><div class="fila">
+        <button class="herr" data-herr="seleccionar" aria-pressed="true" title="Seleccionar (V)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3l14 8-6 1.5L10 19z"/></svg>Seleccionar <kbd>V</kbd></button>
+      </div><div class="nombre-grupo">Modificar</div></div>
+      <div class="grupo"><div class="fila">
+        <button class="herr" data-herr="ducto" aria-pressed="false" title="Ducto (D)"><svg viewBox="0 0 24 24" fill="none" stroke="#2f78c4" stroke-width="1.8"><rect x="2" y="8" width="13" height="8"/><path d="M15 8h3a3 3 0 0 1 3 3v10M15 16h0"/><path d="M15 16h0M18 16v5"/></svg>Ducto <kbd>D</kbd></button>
+        <button class="herr" data-herr="tuberia" aria-pressed="false" title="Tubería (P)"><svg viewBox="0 0 24 24" fill="none" stroke="#1f9fd6" stroke-width="2.4" stroke-linecap="round"><path d="M3 9h10a4 4 0 0 1 4 4v8"/></svg>Tubería <kbd>P</kbd></button>
+        <button class="herr" data-herr="bandeja" aria-pressed="false" title="Bandeja portacables (B)"><svg viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M2 9v5h20V9M6 14v-2M10 14v-2M14 14v-2M18 14v-2"/></svg>Bandeja <kbd>B</kbd></button>
+      </div><div class="nombre-grupo">Trazar</div></div>
+      <div class="grupo"><div class="fila">
+        <button class="herr" data-herr="equipo" aria-pressed="false" title="Colocar equipo (E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="14" height="12"/><circle cx="10" cy="12" r="3"/><path d="M17 10h4M17 14h4"/></svg>Equipo <kbd>E</kbd></button>
+        <select id="sel-familia" aria-label="Familia a colocar" style="align-self:center;max-width:190px"></select>
+      </div><div class="nombre-grupo">Equipos y terminales</div></div>
+      <div class="grupo"><div class="fila">
+        <button class="herr" id="b-deshacer" title="Deshacer (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-3"/></svg>Deshacer</button>
+        <button class="herr" id="b-rehacer" title="Rehacer (Ctrl+Y)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0 10h3"/></svg>Rehacer</button>
+        <button class="herr" id="b-borrar" title="Eliminar selección (Supr)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>Eliminar</button>
+      </div><div class="nombre-grupo">Editar</div></div>
+    </div>
+    <div role="tabpanel" id="cinta-analizar" aria-labelledby="tab-analizar" hidden>
+      <div class="grupo"><div class="fila">
+        <button class="herr" id="b-dimensionar" title="Dimensionar ductos y tuberías del sistema seleccionado o de todo el modelo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17h18M3 13v8M21 13v8M7 9h10M12 3v6"/></svg>Dimensionar</button>
+        <button class="herr" id="b-interf" title="Ver interferencias"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="9" width="12" height="6"/><rect x="9" y="3" width="6" height="18"/></svg>Interferencias</button>
+        <button class="herr" id="b-avisos" title="Ver advertencias"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>Advertencias</button>
+      </div><div class="nombre-grupo">Revisión</div></div>
+      <div class="grupo"><div class="fila">
+        <button class="herr" id="b-sistemas" title="Resumen por red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 12H12V6h4.5M12 12v6h4.5"/></svg>Redes</button>
+        <button class="herr" id="b-cargas" title="Cargas eléctricas por tablero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L5 14h6l-1 8 8-12h-6z"/></svg>Cargas</button>
+      </div><div class="nombre-grupo">Cálculos</div></div>
+    </div>
+    <div role="tabpanel" id="cinta-vista" aria-labelledby="tab-vista" hidden>
+      <div class="grupo"><div class="fila">
+        <button class="herr" data-vista="3d" title="Vista 3D (3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>3D <kbd>3</kbd></button>
+        <button class="herr" data-vista="planta" title="Planta del nivel activo (2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18"/><path d="M3 12h9V3M12 16h9"/></svg>Planta <kbd>2</kbd></button>
+        <button class="herr" id="b-encuadrar" title="Encuadrar modelo (F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/></svg>Encuadrar <kbd>F</kbd></button>
+      </div><div class="nombre-grupo">Vistas</div></div>
+      <div class="grupo"><div class="fila">
+        <button class="herr" id="b-etiquetas" aria-pressed="false" title="Etiquetas de tamaño"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12l8-8h9v9l-8 8z"/><circle cx="15.5" cy="8.5" r="1.5"/></svg>Etiquetas</button>
+        <button class="herr" id="b-conectores" aria-pressed="false" title="Mostrar todos los conectores"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/></svg>Conectores</button>
+      </div><div class="nombre-grupo">Mostrar</div></div>
+      <div class="grupo"><div class="fila" style="align-items:center;gap:8px;padding:0 6px">
+        <label style="display:flex;gap:6px;align-items:center;color:var(--muted)">Cuadrícula <select id="sel-paso"><option value="50">50 mm</option><option value="100" selected>100 mm</option><option value="250">250 mm</option><option value="500">500 mm</option></select></label>
+      </div><div class="nombre-grupo">Plano de trabajo</div></div>
+    </div>
+    <div role="tabpanel" id="cinta-archivo" aria-labelledby="tab-archivo" hidden>
+      <div class="grupo"><div class="fila">
+        <button class="herr" id="b-nuevo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h8l5 5v15H6z"/><path d="M14 2v5h5M12 11v6M9 14h6"/></svg>Nuevo</button>
+        <button class="herr" id="b-abrir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h7l2 2h9v11H3z"/></svg>Abrir</button>
+        <button class="herr" id="b-guardar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h12l3 3v15H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg>Guardar .json</button>
+        <button class="herr" id="b-ejemplo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V8l8-5 8 5v12z"/><path d="M9 20v-6h6v6"/></svg>Ejemplo</button>
+        <input type="file" id="f-abrir" accept=".json,application/json" hidden>
+      </div><div class="nombre-grupo">Proyecto</div></div>
+      <div class="grupo"><div class="fila">
+        <button class="herr" id="b-ifc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>IFC4 (.zip)</button>
+        <button class="herr" id="b-csv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>Tabla .csv</button>
+        <button class="herr" id="b-png"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg>Imagen .png</button>
+      </div><div class="nombre-grupo">Exportar</div></div>
+    </div>
+  </div>
+
+  <div class="opciones" id="opciones" aria-live="polite"></div>
+
+  <main class="cuerpo">
+    <aside class="panel navegador" aria-label="Navegador de proyecto">
+      <h2>Vistas</h2>
+      <ul class="arbol" id="arbol-vistas"></ul>
+      <h2>Niveles <button id="b-nivel">+ Nivel</button></h2>
+      <form class="form-nivel" id="form-nivel" hidden>
+        <input type="text" id="nivel-nombre" placeholder="Nombre" aria-label="Nombre del nivel">
+        <input type="number" id="nivel-elev" placeholder="Elev. mm" aria-label="Elevación en mm" step="100">
+        <button class="btn pri" type="submit">Crear</button>
+      </form>
+      <ul class="arbol" id="arbol-niveles"></ul>
+      <h2>Sistemas</h2>
+      <ul class="arbol" id="arbol-sistemas"></ul>
+      <h2>Equipos</h2>
+      <ul class="arbol" id="arbol-equipos"></ul>
+    </aside>
+
+    <section class="lienzo" id="lienzo" aria-label="Modelo">
+      <div class="hud" id="hud"></div>
+      <div class="vistas" role="group" aria-label="Vista">
+        <button data-vista="3d" aria-pressed="true">3D</button>
+        <button data-vista="planta" aria-pressed="false">Planta</button>
+      </div>
+      <div class="coord" id="coord">X — Y — Z —</div>
+      <div class="snap" id="snap" hidden></div>
+      <svg class="brujula" id="brujula" viewBox="0 0 46 46" aria-hidden="true"><circle cx="23" cy="23" r="20" fill="none" stroke="currentColor" stroke-opacity=".4"/><path id="brujula-n" d="M23 6l5 17h-10z" fill="var(--accent)"/><text x="23" y="44" text-anchor="middle" font-size="9" fill="currentColor" font-family="var(--font-num)">N</text></svg>
+    </section>
+
+    <aside class="panel propiedades" aria-label="Propiedades" id="propiedades"></aside>
+  </main>
+
+  <section class="tablas" id="tablas">
+    <div class="tablas-cab" role="tablist" id="tablas-cab"></div>
+    <div class="contenido-tabla" id="contenido-tabla"></div>
+  </section>
+
+  <footer class="estado">
+    <span class="hint" id="hint"></span>
+    <span class="der" id="estado-der"></span>
+  </footer>
+</div>
+
+<script type="module" src="js/app.js"></script>

@@ -15,10 +15,6 @@ import argparse
 import importlib.util
 import math
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 COL = {'cuerpo': '#dedfdb', 'motores': '#262628', 'reductores': '#c4c7c9', 'estructura': '#1e1e1e',
        'conexiones': '#b0b3b6', 'pernos': '#8c8e91', 'zonas': '#E76A1F'}
@@ -154,6 +150,12 @@ def prism_faces(axis, a0, a1, poly):
 
 
 def main():
+    # matplotlib solo hace falta para dibujar: spec_a_web.py importa este modulo sin el
+    global plt, Poly3DCollection
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
     ap = argparse.ArgumentParser()
     ap.add_argument('spec')
     ap.add_argument('png')

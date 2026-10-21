@@ -14,8 +14,10 @@ dynamo/
 herramientas/
   preview_spec.py                   vista previa / superposición sobre el DXF del proveedor (fuera de Revit)
   build_dyn.py                      regenera el .dyn cuando se edita el .py del nodo
+  spec_a_web.py                     exporta un spec al modelador web (mep-web/js/equipos/)
 docs/
   PEL-01_CPM-7730-8.md              ficha: origen, piezas, conexiones, LOI, pendientes
+mep-web/                            PACT MEP: modelador MEP en el navegador (ver mep-web/README.md)
 ```
 
 ## Uso
